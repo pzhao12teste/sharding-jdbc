@@ -17,6 +17,7 @@
 
 package io.shardingjdbc.core.parsing.parser.dialect.sqlserver.clause;
 
+import io.shardingjdbc.core.constant.DatabaseType;
 import io.shardingjdbc.core.parsing.lexer.LexerEngine;
 import io.shardingjdbc.core.parsing.lexer.dialect.sqlserver.SQLServerKeyword;
 import io.shardingjdbc.core.parsing.lexer.token.DefaultKeyword;
@@ -66,17 +67,17 @@ public final class SQLServerTopClauseParser implements SQLClauseParser {
         LimitValue rowCountValue;
         if (sqlExpression instanceof SQLNumberExpression) {
             int rowCount = ((SQLNumberExpression) sqlExpression).getNumber().intValue();
-            rowCountValue = new LimitValue(rowCount, -1);
+            rowCountValue = new LimitValue(rowCount, -1, false);
             selectStatement.getSqlTokens().add(new RowCountToken(beginPosition, rowCount));
         } else if (sqlExpression instanceof SQLPlaceholderExpression) {
-            rowCountValue = new LimitValue(-1, ((SQLPlaceholderExpression) sqlExpression).getIndex());
+            rowCountValue = new LimitValue(-1, ((SQLPlaceholderExpression) sqlExpression).getIndex(), false);
         } else {
             throw new SQLParsingException(lexerEngine);
         }
         lexerEngine.unsupportedIfEqual(SQLServerKeyword.PERCENT);
         lexerEngine.skipIfEqual(DefaultKeyword.WITH, SQLServerKeyword.TIES);
         if (null == selectStatement.getLimit()) {
-            Limit limit = new Limit(false);
+            Limit limit = new Limit(DatabaseType.SQLServer);
             limit.setRowCount(rowCountValue);
             selectStatement.setLimit(limit);
         } else {

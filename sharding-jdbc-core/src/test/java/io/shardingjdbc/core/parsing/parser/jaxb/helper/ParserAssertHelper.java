@@ -1,5 +1,6 @@
 package io.shardingjdbc.core.parsing.parser.jaxb.helper;
 
+import io.shardingjdbc.core.constant.DatabaseType;
 import io.shardingjdbc.core.constant.ShardingOperator;
 import io.shardingjdbc.core.parsing.parser.context.OrderItem;
 import io.shardingjdbc.core.parsing.parser.context.condition.Column;
@@ -26,8 +27,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class ParserAssertHelper {
@@ -89,7 +92,10 @@ public class ParserAssertHelper {
         Iterator<io.shardingjdbc.core.parsing.parser.jaxb.SQLToken> sqlTokenIterator = filteredSqlTokens.iterator();
         for (SQLToken each : actual) {
             SQLToken sqlToken = buildExpectedSQLToken(sqlTokenIterator.next(), isPreparedStatement);
-            assertTrue(EqualsBuilder.reflectionEquals(sqlToken, each));
+            assertTrue(EqualsBuilder.reflectionEquals(sqlToken, each, "originalLiterals"));
+            if (sqlToken instanceof TableToken) {
+                assertThat(((TableToken) each).getTableName(), is(((TableToken) sqlToken).getTableName()));
+            }
         }
         assertFalse(sqlTokenIterator.hasNext());
     }
@@ -145,10 +151,10 @@ public class ParserAssertHelper {
             return;
         }
         if (null != expected.getRowCount()) {
-            assertTrue(EqualsBuilder.reflectionEquals(expected.getRowCount(), actual.getRowCount()));
+            assertTrue(EqualsBuilder.reflectionEquals(expected.getRowCount(), actual.getRowCount(), "boundOpened"));
         }
         if (null != expected.getOffset()) {
-            assertTrue(EqualsBuilder.reflectionEquals(expected.getOffset(), actual.getOffset()));
+            assertTrue(EqualsBuilder.reflectionEquals(expected.getOffset(), actual.getOffset(), "boundOpened"));
         }
     }
     
@@ -156,21 +162,21 @@ public class ParserAssertHelper {
         if (null == limit) {
             return null;
         }
-        Limit result = new Limit(true);
+        Limit result = new Limit(DatabaseType.MySQL);
         if (isPreparedStatement) {
             if (null != limit.getOffsetParameterIndex()) {
-                result.setOffset(new LimitValue(-1, limit.getOffsetParameterIndex()));
+                result.setOffset(new LimitValue(-1, limit.getOffsetParameterIndex(), true));
             }
             if (null != limit.getRowCountParameterIndex()) {
-                result.setRowCount(new LimitValue(-1, limit.getRowCountParameterIndex()));
+                result.setRowCount(new LimitValue(-1, limit.getRowCountParameterIndex(), false));
             }
         } else {
             if (null != limit.getOffset()) {
-                result.setOffset(new LimitValue(limit.getOffset(), -1));
+                result.setOffset(new LimitValue(limit.getOffset(), -1, true));
                 
             }
             if (null != limit.getRowCount()) {
-                result.setRowCount(new LimitValue(limit.getRowCount(), -1));
+                result.setRowCount(new LimitValue(limit.getRowCount(), -1, false));
             }
         }
         return result;

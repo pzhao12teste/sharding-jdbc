@@ -15,8 +15,9 @@
  * </p>
  */
 
-package io.shardingjdbc.core.merger.limit;
+package io.shardingjdbc.core.merger.pagination;
 
+import io.shardingjdbc.core.constant.DatabaseType;
 import io.shardingjdbc.core.merger.MergeEngine;
 import io.shardingjdbc.core.merger.ResultSetMerger;
 import io.shardingjdbc.core.parsing.parser.context.limit.Limit;
@@ -55,8 +56,8 @@ public final class LimitDecoratorResultSetMergerTest {
     
     @Test
     public void assertNextForSkipAll() throws SQLException {
-        Limit limit = new Limit(true);
-        limit.setOffset(new LimitValue(Integer.MAX_VALUE, -1));
+        Limit limit = new Limit(DatabaseType.MySQL);
+        limit.setOffset(new LimitValue(Integer.MAX_VALUE, -1, true));
         selectStatement.setLimit(limit);
         for (ResultSet each : resultSets) {
             when(each.next()).thenReturn(true, true, false);
@@ -68,8 +69,8 @@ public final class LimitDecoratorResultSetMergerTest {
     
     @Test
     public void assertNextWithoutRowCount() throws SQLException {
-        Limit limit = new Limit(true);
-        limit.setOffset(new LimitValue(2, -1));
+        Limit limit = new Limit(DatabaseType.MySQL);
+        limit.setOffset(new LimitValue(2, -1, true));
         selectStatement.setLimit(limit);
         for (ResultSet each : resultSets) {
             when(each.next()).thenReturn(true, true, false);
@@ -87,9 +88,9 @@ public final class LimitDecoratorResultSetMergerTest {
     
     @Test
     public void assertNextWithRewriteRowCount() throws SQLException {
-        Limit limit = new Limit(true);
-        limit.setOffset(new LimitValue(2, -1));
-        limit.setRowCount(new LimitValue(2, -1));
+        Limit limit = new Limit(DatabaseType.MySQL);
+        limit.setOffset(new LimitValue(2, -1, true));
+        limit.setRowCount(new LimitValue(2, -1, false));
         selectStatement.setLimit(limit);
         for (ResultSet each : resultSets) {
             when(each.next()).thenReturn(true, true, false);
@@ -103,9 +104,9 @@ public final class LimitDecoratorResultSetMergerTest {
     
     @Test
     public void assertNextWithNotRewriteRowCount() throws SQLException {
-        Limit limit = new Limit(false);
-        limit.setOffset(new LimitValue(2, -1));
-        limit.setRowCount(new LimitValue(4, -1));
+        Limit limit = new Limit(DatabaseType.Oracle);
+        limit.setOffset(new LimitValue(2, -1, true));
+        limit.setRowCount(new LimitValue(4, -1, false));
         selectStatement.setLimit(limit);
         for (ResultSet each : resultSets) {
             when(each.next()).thenReturn(true, true, false);
