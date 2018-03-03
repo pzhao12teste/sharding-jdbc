@@ -51,18 +51,14 @@ public final class TableRule {
     
     private final KeyGenerator keyGenerator;
     
-    private final String logicIndex;
-    
     public TableRule(final String logicTable, final List<String> actualDataNodes, final Map<String, DataSource> dataSourceMap,
-                     final ShardingStrategy databaseShardingStrategy, final ShardingStrategy tableShardingStrategy, 
-                     final String generateKeyColumn, final KeyGenerator keyGenerator, final String logicIndex) {
-        this.logicTable = logicTable.toLowerCase();
+                     final ShardingStrategy databaseShardingStrategy, final ShardingStrategy tableShardingStrategy, final String generateKeyColumn, final KeyGenerator keyGenerator) {
+        this.logicTable = logicTable;
         this.actualDataNodes = null == actualDataNodes || actualDataNodes.isEmpty() ? generateDataNodes(logicTable, dataSourceMap) : generateDataNodes(actualDataNodes, dataSourceMap);
         this.databaseShardingStrategy = databaseShardingStrategy;
         this.tableShardingStrategy = tableShardingStrategy;
         this.generateKeyColumn = generateKeyColumn;
         this.keyGenerator = keyGenerator;
-        this.logicIndex = null == logicIndex ? null : logicIndex.toLowerCase();
     }
     
     private List<DataNode> generateDataNodes(final String logicTable, final Map<String, DataSource> dataSourceMap) {
@@ -76,8 +72,10 @@ public final class TableRule {
     private List<DataNode> generateDataNodes(final List<String> actualDataNodes, final Map<String, DataSource> dataSourceMap) {
         List<DataNode> result = new LinkedList<>();
         for (String each : actualDataNodes) {
+            Preconditions.checkArgument(DataNode.isValidDataNode(each), String.format("Invalid format for actual data nodes: '%s'", each));
             DataNode dataNode = new DataNode(each);
-            Preconditions.checkArgument(dataSourceMap.containsKey(dataNode.getDataSourceName()), String.format("Cannot find data source in sharding rule, invalid actual data node is: '%s'", each));
+            Preconditions.checkArgument(dataSourceMap.containsKey(dataNode.getDataSourceName()), 
+                    String.format("Cannot find data source name in sharding rule, invalid actual data node is: '%s'", each));
             result.add(dataNode);
         }
         return result;
@@ -121,14 +119,5 @@ public final class TableRule {
             result++;
         }
         return -1;
-    }
-    
-    boolean isExisted(final String actualTableName) {
-        for (DataNode each : actualDataNodes) {
-            if (each.getTableName().equalsIgnoreCase(actualTableName)) {
-                return true;
-            }
-        }
-        return false;
     }
 }

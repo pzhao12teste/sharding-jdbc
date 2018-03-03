@@ -31,7 +31,6 @@ import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.SQLXML;
-import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Calendar;
@@ -46,8 +45,8 @@ public final class ShardingResultSet extends AbstractResultSetAdapter {
     
     private final ResultSetMerger mergeResultSet;
     
-    public ShardingResultSet(final List<ResultSet> resultSets, final ResultSetMerger mergeResultSet, final Statement statement) {
-        super(resultSets, statement);
+    public ShardingResultSet(final List<ResultSet> resultSets, final ResultSetMerger mergeResultSet) {
+        super(resultSets);
         this.mergeResultSet = mergeResultSet;
     }
     

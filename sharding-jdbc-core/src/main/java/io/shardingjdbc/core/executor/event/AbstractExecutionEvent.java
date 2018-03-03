@@ -21,6 +21,8 @@ import com.google.common.base.Optional;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.sql.SQLException;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -28,19 +30,27 @@ import java.util.UUID;
  *
  * @author zhangliang
  */
+@Getter
+@Setter
 public abstract class AbstractExecutionEvent {
     
-    @Getter
-    private final String id = UUID.randomUUID().toString();
+    private final String id;
     
-    @Getter
-    @Setter
-    private EventExecutionType eventExecutionType = EventExecutionType.BEFORE_EXECUTE;
+    private final String dataSource;
     
-    @Setter
-    private Exception exception;
+    private final String sql;
     
-    public Optional<? extends Exception> getException() {
-        return Optional.fromNullable(exception);
+    private final List<Object> parameters;
+    
+    private EventExecutionType eventExecutionType;
+    
+    private Optional<SQLException> exception;
+    
+    public AbstractExecutionEvent(final String dataSource, final String sql, final List<Object> parameters) {
+        id = UUID.randomUUID().toString();
+        this.dataSource = dataSource;
+        this.sql = sql;
+        this.parameters = parameters;
+        eventExecutionType = EventExecutionType.BEFORE_EXECUTE;
     }
 }

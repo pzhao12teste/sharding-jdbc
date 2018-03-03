@@ -1,6 +1,5 @@
 package io.shardingjdbc.core.parsing.parser.dialect.oracle.clause;
 
-import io.shardingjdbc.core.constant.DatabaseType;
 import io.shardingjdbc.core.parsing.lexer.LexerEngine;
 import io.shardingjdbc.core.parsing.parser.context.selectitem.SelectItem;
 import io.shardingjdbc.core.parsing.parser.clause.WhereClauseParser;
@@ -16,7 +15,7 @@ import java.util.List;
 public final class OracleWhereClauseParser extends WhereClauseParser {
     
     public OracleWhereClauseParser(final LexerEngine lexerEngine) {
-        super(DatabaseType.Oracle, lexerEngine);
+        super(lexerEngine);
     }
     
     @Override

@@ -26,8 +26,6 @@ public class YamlTableRuleConfiguration {
     
     private String keyGeneratorClass;
     
-    private String logicIndex;
-    
     /**
      * Build table rule configuration.
      *
@@ -47,7 +45,6 @@ public class YamlTableRuleConfiguration {
         }
         tableRuleConfig.setKeyGeneratorClass(keyGeneratorClass);
         tableRuleConfig.setKeyGeneratorColumnName(keyGeneratorColumnName);
-        tableRuleConfig.setLogicIndex(logicIndex);
         return tableRuleConfig;
     }
 }

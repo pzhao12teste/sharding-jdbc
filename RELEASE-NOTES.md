@@ -1,79 +1,23 @@
-## 2.1.0
-
-### 里程碑
-1. Sharding-JDBC-Server发布. 支持以数据库的形式使用Sharding-JDBC, 全面提供对MySQL命令行以及图形化客户端的支持
-
-### 功能提升
-1. [ISSUE #608](https://github.com/shardingjdbc/sharding-jdbc/issues/608) 支持MySQL的USE语句
-1. [ISSUE #609](https://github.com/shardingjdbc/sharding-jdbc/issues/609) 支持MySQL的SHOW语句
-1. [ISSUE #610](https://github.com/shardingjdbc/sharding-jdbc/issues/610) 优化不包含表的DQL
-1. [ISSUE #611](https://github.com/shardingjdbc/sharding-jdbc/issues/611) 支持MySQL的DESC语句
-
-## 2.0.3
-
-### 功能提升
-1. [ISSUE #600](https://github.com/shardingjdbc/sharding-jdbc/issues/600) 支持TCL
-
-### 缺陷修正
-1. [ISSUE #522](https://github.com/shardingjdbc/sharding-jdbc/issues/522) 读写分离Slave库不需要执行DDL语句
-1. [ISSUE #540](https://github.com/shardingjdbc/sharding-jdbc/issues/540) 梳理并支持别名为关键字SQL
-1. [ISSUE #577](https://github.com/shardingjdbc/sharding-jdbc/issues/577) 支持YAML配置换行
-
-## 2.0.2
-
-### 功能提升
-1. [ISSUE #475](https://github.com/shardingjdbc/sharding-jdbc/issues/475) 支持CREATE INDEX
-1. [ISSUE #525](https://github.com/shardingjdbc/sharding-jdbc/issues/525) 支持DROP INDEX
-
-### 缺陷修正
-1. [ISSUE #520](https://github.com/shardingjdbc/sharding-jdbc/issues/520) 引入分表后，唯一键冲突时异常类型不再是DuplicateKeyException
-1. [ISSUE #521](https://github.com/shardingjdbc/sharding-jdbc/issues/521) YAML文件中ShardingProperties设置无效
-1. [ISSUE #529](https://github.com/shardingjdbc/sharding-jdbc/issues/529) 表名大写无法查询
-1. [ISSUE #541](https://github.com/shardingjdbc/sharding-jdbc/issues/541) 无法解析IS NOT NULL
-1. [ISSUE #557](https://github.com/shardingjdbc/sharding-jdbc/issues/557) GroupBy和OrderBy仅别名不一致问题应使用流式归并
-1. [ISSUE #559](https://github.com/shardingjdbc/sharding-jdbc/issues/559) 支持解析以负号和小数点开头的数字(如:-.12)
-1. [ISSUE #567](https://github.com/shardingjdbc/sharding-jdbc/issues/567) MySQL补列时增加转义符以防止使用关键字作为列名或别名导致错误
-
-## 2.0.1
-
-### 功能提升
-1. [ISSUE #489](https://github.com/shardingjdbc/sharding-jdbc/issues/489) SpringName使用RuntimeBeanReference防止创建InnerBean
-1. [ISSUE #496](https://github.com/shardingjdbc/sharding-jdbc/issues/496) 分片配置中逻辑表名可以大小写不敏感
-1. [ISSUE #497](https://github.com/shardingjdbc/sharding-jdbc/issues/497) 注册中心优雅关闭
-
-### 缺陷修正
-1. [ISSUE #490](https://github.com/shardingjdbc/sharding-jdbc/issues/490) Oracle使用rownum大于等于或小于等于分页结果不正确
-1. [ISSUE #491](https://github.com/shardingjdbc/sharding-jdbc/issues/491) 通过ResultSet.getStatement().getConnection().close()无法释放连接
-
-## 2.0.0
+## 2.0.0.M1
 
 ### 里程碑
 
+1. 配置动态化. 可以通过zookeeper作为注册中心动态修改数据源以及分片配置
 1. API调整. 全新的Maven坐标名称, 包名称和spring命名空间名称. 简化和提升API配置, inline表达式全配置支持
-1. 提供sharding-jdbc的spring-boot-starter
-1. 配置动态化. 可以通过zookeeper和etcd作为注册中心动态修改数据源以及分片配置
-1. 数据治理. 熔断数据库访问程序对数据库的访问和禁用从库的访问
-1. ConfigMap支持. 可以在分片和读写分离策略中获取预定义的元数据
-1. 跟踪系统支持. 可以通过sky-walking等基于Opentracing协议的APM系统中查看sharding-jdbc的调用链
+
+### 新功能
+
+1. 新增sharding-jdbc-spring-boot-starter功能
 
 ### 功能提升
 
 1. [ISSUE #386](https://github.com/shardingjdbc/sharding-jdbc/issues/386) 支持SELECT 1这种不包含表名称的SQL
-1. [ISSUE #407](https://github.com/shardingjdbc/sharding-jdbc/issues/407) sharding-jdbc的spring-boot-starter兼容使用减号和驼峰两种方式进行属性配置
-1. [ISSUE #424](https://github.com/shardingjdbc/sharding-jdbc/issues/424) 提供SQL总体执行情况事件
 
 ### 缺陷修正
 
-1. [ISSUE #387](https://github.com/shardingjdbc/sharding-jdbc/issues/387) 当函数 + 列名中存在'`'防止关键字时处理出错
+1. [ISSUE #387](https://github.com/shardingjdbc/sharding-jdbc/issues/387) 当函数+列名中存在'`'防止关键字时处理出错
 1. [ISSUE #394](https://github.com/shardingjdbc/sharding-jdbc/issues/394) 无法单独close statement
 1. [ISSUE #398](https://github.com/shardingjdbc/sharding-jdbc/issues/398) 使用Hint路由屏蔽表和列名称的大小写区别
-1. [ISSUE #404](https://github.com/shardingjdbc/sharding-jdbc/issues/404) sharding-jdbc的spring-boot-starter不支持HikariDataSource
-1. [ISSUE #419](https://github.com/shardingjdbc/sharding-jdbc/issues/419) SQL改写时, 未判断别名是否为关键字未加转义符导致了SQL异常
-1. [ISSUE #436](https://github.com/shardingjdbc/sharding-jdbc/issues/436) 读写分离多从库配置RoundRobin算法并使用MyBatis时，只能路由到同一从库
-1. [ISSUE #452](https://github.com/shardingjdbc/sharding-jdbc/issues/452) DDL语句分片至多个表会造成连接泄漏的问题
-1. [ISSUE #453](https://github.com/shardingjdbc/sharding-jdbc/issues/453) 编排治理数据源配置name与Druid数据源name冲突
-1. [ISSUE #464](https://github.com/shardingjdbc/sharding-jdbc/issues/464) SQL如果varchar类型由于没有匹配单引号并未关闭, 而恰好sql中的下一个varchar又是汉字的错误SQL, 将导致CPU使用增高
-1. [ISSUE #472](https://github.com/shardingjdbc/sharding-jdbc/issues/472) Connection执行createStatement之前, 先调用getMetaData再setAutoCommit无法对之后创建的数据库真实连接生效
 
 ## 1.5.4.1
 

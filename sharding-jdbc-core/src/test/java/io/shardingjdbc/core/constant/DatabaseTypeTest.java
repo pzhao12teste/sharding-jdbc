@@ -30,7 +30,6 @@ public final class DatabaseTypeTest {
         assertThat(DatabaseType.valueFrom("MySQL"), is(DatabaseType.MySQL));
         assertThat(DatabaseType.valueFrom("Oracle"), is(DatabaseType.Oracle));
         assertThat(DatabaseType.valueFrom("Microsoft SQL Server"), is(DatabaseType.SQLServer));
-        assertThat(DatabaseType.valueFrom("PostgreSQL"), is(DatabaseType.PostgreSQL));
     }
     
     @Test(expected = UnsupportedOperationException.class)

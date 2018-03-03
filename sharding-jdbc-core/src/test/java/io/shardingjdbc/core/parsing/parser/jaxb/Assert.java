@@ -50,9 +50,6 @@ public final class Assert {
     @XmlElement(name = "table-token")
     private List<TableToken> tableTokens;
     
-    @XmlElement(name = "index-token")
-    private IndexToken indexToken;
-    
     @XmlElement(name = "items-token")
     private ItemsToken itemsToken;
     
@@ -87,29 +84,26 @@ public final class Assert {
     private Limit limit;
     
     public List<SQLToken> getSqlTokens() {
-        List<SQLToken> result = new ArrayList<>(7);
-        if (null != tableTokens) {
+        List<SQLToken> result = new ArrayList<SQLToken>(7);
+        if (tableTokens != null) {
             result.addAll(tableTokens);
         }
-        if (null != indexToken) {
-            result.add(indexToken);
-        }
-        if (null != offsetToken) {
+        if (offsetToken != null) {
             result.add(offsetToken);
         }
-        if (null != rowCountToken) {
+        if (rowCountToken != null) {
             result.add(rowCountToken);
         }
-        if (null != itemsToken) {
+        if (itemsToken != null) {
             result.add(itemsToken);
         }
-        if (null != generatedKeyToken) {
+        if (generatedKeyToken != null) {
             result.add(generatedKeyToken);
         }
-        if (null != multipleInsertValuesToken) {
+        if (multipleInsertValuesToken != null) {
             result.add(multipleInsertValuesToken);
         }
-        if (null != orderByToken) {
+        if (orderByToken != null) {
             result.add(orderByToken);
         }
         return result;

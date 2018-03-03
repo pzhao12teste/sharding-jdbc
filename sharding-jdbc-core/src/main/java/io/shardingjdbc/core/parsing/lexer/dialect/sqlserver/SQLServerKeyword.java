@@ -35,6 +35,7 @@ public enum SQLServerKeyword implements Keyword {
     ONLY, 
     OUTPUT, 
     AUTO, 
+    BEGIN, 
     IDENTITY, 
     BROWSE, 
     TYPE, 
@@ -47,6 +48,5 @@ public enum SQLServerKeyword implements Keyword {
     APPLY,
     REDUCE,
     REPLICATE,
-    EXTRACT,
     REDISTRIBUTE
 }

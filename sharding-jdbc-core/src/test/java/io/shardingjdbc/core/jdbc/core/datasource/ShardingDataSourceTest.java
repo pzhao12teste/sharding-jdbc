@@ -70,8 +70,7 @@ public final class ShardingDataSourceTest {
         masterSlaveRuleConfig.setName("ds");
         masterSlaveRuleConfig.setMasterDataSourceName("masterDataSource");
         masterSlaveRuleConfig.setSlaveDataSourceNames(Collections.singletonList("slaveDataSource"));
-        MasterSlaveDataSource dataSource2 = (MasterSlaveDataSource) MasterSlaveDataSourceFactory.createDataSource(
-                masterSlaveDataSourceMap, masterSlaveRuleConfig, Collections.<String, Object>emptyMap());
+        MasterSlaveDataSource dataSource2 = (MasterSlaveDataSource) MasterSlaveDataSourceFactory.createDataSource(masterSlaveDataSourceMap, masterSlaveRuleConfig);
         Map<String, DataSource> dataSourceMap = new HashMap<>(2, 1);
         dataSourceMap.put("ds1", dataSource1);
         dataSourceMap.put("ds2", dataSource2);
@@ -103,7 +102,7 @@ public final class ShardingDataSourceTest {
         masterSlaveRuleConfig.setName("ds");
         masterSlaveRuleConfig.setMasterDataSourceName("masterDataSource");
         masterSlaveRuleConfig.setSlaveDataSourceNames(Collections.singletonList("slaveDataSource"));
-        MasterSlaveDataSource dataSource2 = (MasterSlaveDataSource) MasterSlaveDataSourceFactory.createDataSource(slaveDataSourceMap, masterSlaveRuleConfig, Collections.<String, Object>emptyMap());
+        MasterSlaveDataSource dataSource2 = (MasterSlaveDataSource) MasterSlaveDataSourceFactory.createDataSource(slaveDataSourceMap, masterSlaveRuleConfig);
         DataSource dataSource3 = mockDataSource("H2");
         Map<String, DataSource> dataSourceMap = new HashMap<>(3, 1);
         dataSourceMap.put("ds1", dataSource1);
@@ -171,9 +170,7 @@ public final class ShardingDataSourceTest {
         assertThat(originExecutorEngine, not(getExecutorEngine(shardingDataSource)));
     }
     
-    // TODO to be discuss
-    // @Test(expected = IllegalStateException.class)
-    @Test
+    @Test(expected = IllegalStateException.class)
     public void assertRenewWithDatabaseTypeChanged() throws SQLException {
         DataSource originalDataSource = mockDataSource("H2");
         Map<String, DataSource> originalDataSourceMap = new HashMap<>(1, 1);

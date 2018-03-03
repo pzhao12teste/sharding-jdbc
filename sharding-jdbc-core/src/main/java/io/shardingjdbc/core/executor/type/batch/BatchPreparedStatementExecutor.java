@@ -24,7 +24,6 @@ import io.shardingjdbc.core.executor.ExecuteCallback;
 import io.shardingjdbc.core.executor.ExecutorEngine;
 import lombok.RequiredArgsConstructor;
 
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -51,9 +50,8 @@ public final class BatchPreparedStatementExecutor {
      * Execute batch.
      * 
      * @return execute results
-     * @throws SQLException SQL exception
      */
-    public int[] executeBatch() throws SQLException {
+    public int[] executeBatch() {
         return accumulate(executorEngine.executeBatch(sqlType, batchPreparedStatementUnits, parameterSets, new ExecuteCallback<int[]>() {
             
             @Override

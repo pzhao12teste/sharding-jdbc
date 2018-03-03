@@ -17,7 +17,6 @@
 
 package io.shardingjdbc.core.parsing.parser.dialect.mysql.clause;
 
-import io.shardingjdbc.core.constant.DatabaseType;
 import io.shardingjdbc.core.parsing.lexer.LexerEngine;
 import io.shardingjdbc.core.parsing.lexer.dialect.mysql.MySQLKeyword;
 import io.shardingjdbc.core.parsing.lexer.token.Literals;
@@ -77,8 +76,8 @@ public final class MySQLLimitClauseParser implements SQLClauseParser {
         if (!isParameterForValue) {
             selectStatement.getSqlTokens().add(new RowCountToken(valueBeginPosition, value));
         }
-        Limit limit = new Limit(DatabaseType.MySQL);
-        limit.setRowCount(new LimitValue(value, valueIndex, false));
+        Limit limit = new Limit(true);
+        limit.setRowCount(new LimitValue(value, valueIndex));
         selectStatement.setLimit(limit);
     }
     
@@ -105,9 +104,9 @@ public final class MySQLLimitClauseParser implements SQLClauseParser {
         if (!isParameterForRowCount) {
             selectStatement.getSqlTokens().add(new RowCountToken(rowCountBeginPosition, rowCountValue));
         }
-        Limit result = new Limit(DatabaseType.MySQL);
-        result.setRowCount(new LimitValue(rowCountValue, rowCountIndex, false));
-        result.setOffset(new LimitValue(value, index, true));
+        Limit result = new Limit(true);
+        result.setRowCount(new LimitValue(rowCountValue, rowCountIndex));
+        result.setOffset(new LimitValue(value, index));
         return result;
     }
     
@@ -133,9 +132,9 @@ public final class MySQLLimitClauseParser implements SQLClauseParser {
         if (!isParameterForValue) {
             selectStatement.getSqlTokens().add(new RowCountToken(valueBeginPosition, value));
         }
-        Limit result = new Limit(DatabaseType.MySQL);
-        result.setRowCount(new LimitValue(value, index, false));
-        result.setOffset(new LimitValue(offsetValue, offsetIndex, true));
+        Limit result = new Limit(true);
+        result.setRowCount(new LimitValue(value, index));
+        result.setOffset(new LimitValue(offsetValue, offsetIndex));
         return result;
     }
 }

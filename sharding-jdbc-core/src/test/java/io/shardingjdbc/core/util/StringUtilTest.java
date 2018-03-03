@@ -25,7 +25,7 @@ import static org.junit.Assert.assertTrue;
 public class StringUtilTest {
     
     @Test
-    public void assertIsBooleanValue() {
+    public void testIsBooleanValue() {
         assertTrue(StringUtil.isBooleanValue("TRUE"));
         assertTrue(StringUtil.isBooleanValue("FALSE"));
         assertTrue(StringUtil.isBooleanValue("true"));
@@ -34,13 +34,13 @@ public class StringUtilTest {
     }
     
     @Test
-    public void assertIsIntValue() {
+    public void testIsIntValue() {
         assertTrue(StringUtil.isIntValue("-10"));
         assertFalse(StringUtil.isIntValue("1-1"));
     }
     
     @Test
-    public void assertIsLongValue() {
+    public void testIsLongValue() {
         assertTrue(StringUtil.isLongValue("10"));
         assertFalse(StringUtil.isLongValue("0.1"));
         assertFalse(StringUtil.isLongValue("A"));

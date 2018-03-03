@@ -43,17 +43,5 @@ public enum SQLType {
      *
      * <p>Such as {@code CREATE}, {@code ALTER}, {@code DROP}, {@code TRUNCATE}.</p>
      */
-    DDL,
-    
-    /**
-     * Transaction Control Language.
-     *
-     * <p>Such as {@code SET}, {@code COMMIT}, {@code ROLLBACK}, {@code SAVEPOIINT}, {@code BEGIN}.</p>
-     */
-    TCL,
-    
-    /**
-     * Database administrator Language.
-     */
-    DAL
+    DDL
 }

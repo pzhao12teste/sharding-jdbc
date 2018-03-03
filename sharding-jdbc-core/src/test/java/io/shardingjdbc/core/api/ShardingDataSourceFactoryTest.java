@@ -31,7 +31,6 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
@@ -42,14 +41,17 @@ import static org.mockito.Mockito.when;
 public final class ShardingDataSourceFactoryTest {
     
     @Test
-    public void assertCreateDataSourceWithShardingRuleAndConfigMapAndProperties() throws SQLException, NoSuchFieldException, IllegalAccessException {
+    public void assertCreateDataSourceWithShardingRuleOnly() throws SQLException, NoSuchFieldException, IllegalAccessException {
+        ShardingRuleConfiguration shardingRuleConfig = createShardingRuleConfig();
+        assertNotNull(getShardingRule(ShardingDataSourceFactory.createDataSource(getDataSourceMap(), shardingRuleConfig)));
+    }
+    
+    @Test
+    public void assertCreateDataSourceWithShardingRuleAndProperties() throws SQLException, NoSuchFieldException, IllegalAccessException {
         ShardingRuleConfiguration shardingRuleConfig = createShardingRuleConfig();
         Properties props = new Properties();
-        Map<String, Object> configMap = new ConcurrentHashMap<>();
-        configMap.put("key1", "value1");
-        DataSource dataSource = ShardingDataSourceFactory.createDataSource(getDataSourceMap(), shardingRuleConfig, configMap, props);
+        DataSource dataSource = ShardingDataSourceFactory.createDataSource(getDataSourceMap(), shardingRuleConfig, props);
         assertNotNull(getShardingRule(dataSource));
-        assertThat(ConfigMapContext.getInstance().getShardingConfig(), is(configMap));
         assertThat(getShardingProperties(dataSource), is(props));
     }
     

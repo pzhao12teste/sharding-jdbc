@@ -173,25 +173,6 @@
         </order-by-columns>
         <limit offset="6" offset-index="5" row-count-index="0" row-count="3" />
     </assert>
-    <assert id="assertSelectSingleTablePaginationWithTopAndRange" parameters="3,1">
-        <tables>
-            <table name="t_order" alias="o" />
-        </tables>
-        <table-tokens>
-            <table-token begin-position="157" original-literals="t_order" />
-        </table-tokens>
-        <items-token begin-position="152">
-            <items>
-                <item>o.order_id AS ORDER_BY_DERIVED_0 </item>
-            </items>
-        </items-token>
-        <offset-token begin-position="197" offset="1" />
-        <row-count-token begin-position="27" row-count="3" />
-        <order-by-columns>
-            <order-by-column name="order_id" owner="o" alias="ORDER_BY_DERIVED_0" order-by-type="DESC" />
-        </order-by-columns>
-        <limit offset="1" offset-index="1" row-count-index="0" row-count="3" />
-    </assert>
     <assert id="assertSelectPaginationWithRowNumber" parameters="1,2,9,10,3">
         <tables>
             <table name="t_order" alias="order0_" />
@@ -252,48 +233,5 @@
             <order-by-column name="item_id" alias="ORDER_BY_DERIVED_0" owner="i" order-by-type="DESC" />
         </order-by-columns>
         <limit offset="3" offset-index="5" row-count-index="4" row-count="5" />
-    </assert>
-    <assert id="assertSelectSingleTablePaginationWithRowNumberAndRange" parameters="4,1">
-        <tables>
-            <table name="t_order"/>
-        </tables>
-        <table-tokens>
-            <table-token begin-position="62" original-literals="t_order" />
-        </table-tokens>
-        <offset-token begin-position="140" offset="1" />
-        <row-count-token begin-position="111" row-count="4" />
-        <order-by-columns>
-            <order-by-column name="order_id" order-by-type="DESC" />
-        </order-by-columns>
-        <limit offset="1" offset-index="1" row-count-index="0" row-count="4" />
-    </assert>
-    <assert id="assertSelectLeftJoinAndLimit" parameters="10,1000,0,20">
-        <tables>
-            <table name="t_order" alias="o" />
-            <table name="t_order_item" alias="i" />
-        </tables>
-        <table-tokens>
-            <table-token begin-position="16" original-literals="t_order" />
-            <table-token begin-position="36" original-literals="t_order_item" />
-        </table-tokens>
-        <items-token begin-position="11">
-            <items>
-                <item>i.item_id AS ORDER_BY_DERIVED_0 </item>
-            </items>
-        </items-token>
-        <offset-token begin-position="154" offset="0" />
-        <row-count-token begin-position="157" row-count="20" />
-        <conditions>
-            <condition column-name="user_id" table-name="t_order" operator="EQUAL">
-                <value index="0" literal="10" type="int" />
-            </condition>
-            <condition column-name="order_id" table-name="t_order" operator="EQUAL">
-                <value index="1" literal="1000" type="int" />
-            </condition>
-        </conditions>
-        <order-by-columns>
-            <order-by-column name="item_id" alias="ORDER_BY_DERIVED_0" owner="i" order-by-type="ASC" />
-        </order-by-columns>
-        <limit offset="0" offset-index="2" row-count="20" row-count-index="3" />
     </assert>
 </asserts>

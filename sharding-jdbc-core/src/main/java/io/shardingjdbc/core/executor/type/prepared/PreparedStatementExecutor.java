@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.Collection;
 import java.util.List;
 
@@ -50,9 +49,8 @@ public final class PreparedStatementExecutor {
      * Execute query.
      * 
      * @return result set list
-     * @throws SQLException SQL exception
      */
-    public List<ResultSet> executeQuery() throws SQLException {
+    public List<ResultSet> executeQuery() {
         return executorEngine.executePreparedStatement(sqlType, preparedStatementUnits, parameters, new ExecuteCallback<ResultSet>() {
             
             @Override
@@ -66,9 +64,8 @@ public final class PreparedStatementExecutor {
      * Execute update.
      * 
      * @return effected records count
-     * @throws SQLException SQL exception
      */
-    public int executeUpdate() throws SQLException {
+    public int executeUpdate() {
         List<Integer> results = executorEngine.executePreparedStatement(sqlType, preparedStatementUnits, parameters, new ExecuteCallback<Integer>() {
             
             @Override
@@ -91,9 +88,8 @@ public final class PreparedStatementExecutor {
      * Execute SQL.
      *
      * @return return true if is DQL, false if is DML
-     * @throws SQLException SQL exception
      */
-    public boolean execute() throws SQLException {
+    public boolean execute() {
         List<Boolean> result = executorEngine.executePreparedStatement(sqlType, preparedStatementUnits, parameters, new ExecuteCallback<Boolean>() {
             
             @Override

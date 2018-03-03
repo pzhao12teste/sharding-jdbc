@@ -17,16 +17,13 @@
 
 package io.shardingjdbc.core.parsing.parser.sql.ddl.create;
 
+import io.shardingjdbc.core.rule.ShardingRule;
 import io.shardingjdbc.core.parsing.lexer.LexerEngine;
 import io.shardingjdbc.core.parsing.lexer.token.DefaultKeyword;
 import io.shardingjdbc.core.parsing.lexer.token.Keyword;
-import io.shardingjdbc.core.parsing.lexer.token.Token;
 import io.shardingjdbc.core.parsing.parser.clause.TableReferencesClauseParser;
-import io.shardingjdbc.core.parsing.parser.exception.SQLParsingException;
 import io.shardingjdbc.core.parsing.parser.sql.SQLParser;
 import io.shardingjdbc.core.parsing.parser.sql.ddl.DDLStatement;
-import io.shardingjdbc.core.parsing.parser.token.IndexToken;
-import io.shardingjdbc.core.rule.ShardingRule;
 import lombok.AccessLevel;
 import lombok.Getter;
 
@@ -53,38 +50,15 @@ public abstract class AbstractCreateParser implements SQLParser {
     @Override
     public DDLStatement parse() {
         lexerEngine.nextToken();
-        lexerEngine.skipAll(getSkippedKeywordsBetweenCreateIndexAndKeyword());
         lexerEngine.skipAll(getSkippedKeywordsBetweenCreateAndKeyword());
+        lexerEngine.unsupportedIfNotSkip(DefaultKeyword.TABLE);
+        lexerEngine.skipAll(getSkippedKeywordsBetweenCreateTableAndTableName());
         DDLStatement result = new DDLStatement();
-        if (lexerEngine.skipIfEqual(DefaultKeyword.INDEX)) {
-            lexerEngine.skipAll(getSkippedKeywordsBetweenCreateIndexAndIndexName());
-            parseIndex(result);
-        } else if (lexerEngine.skipIfEqual(DefaultKeyword.TABLE)) {
-            lexerEngine.skipAll(getSkippedKeywordsBetweenCreateTableAndTableName());
-        } else {
-            throw new SQLParsingException("Can't support other CREATE grammar unless CREATE TABLE, CREATE INDEX.");
-        }
-        tableReferencesClauseParser.parseSingleTableWithoutAlias(result);
+        tableReferencesClauseParser.parse(result, true);
         return result;
     }
     
-    protected abstract Keyword[] getSkippedKeywordsBetweenCreateIndexAndKeyword();
-    
     protected abstract Keyword[] getSkippedKeywordsBetweenCreateAndKeyword();
-    
-    protected Keyword[] getSkippedKeywordsBetweenCreateIndexAndIndexName() {
-        return new Keyword[] {};
-    }
-    
-    private void parseIndex(final DDLStatement ddlStatement) {
-        Token currentToken = lexerEngine.getCurrentToken();
-        int beginPosition = currentToken.getEndPosition() - currentToken.getLiterals().length();
-        String literals = currentToken.getLiterals();
-        lexerEngine.skipUntil(DefaultKeyword.ON);
-        lexerEngine.nextToken();
-        String tableName = lexerEngine.getCurrentToken().getLiterals();
-        ddlStatement.getSqlTokens().add(new IndexToken(beginPosition, literals, tableName));
-    }
     
     protected abstract Keyword[] getSkippedKeywordsBetweenCreateTableAndTableName();
 }

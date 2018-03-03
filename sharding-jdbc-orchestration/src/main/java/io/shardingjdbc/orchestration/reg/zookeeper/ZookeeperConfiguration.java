@@ -17,8 +17,8 @@
 
 package io.shardingjdbc.orchestration.reg.zookeeper;
 
-import io.shardingjdbc.orchestration.reg.api.RegistryCenterConfiguration;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
 /**
@@ -28,19 +28,20 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public final class ZookeeperConfiguration implements RegistryCenterConfiguration {
+@RequiredArgsConstructor
+public final class ZookeeperConfiguration {
     
     /**
      * Zookeeper server list.
      * 
      * <p>Include ip address and port, multiple servers split by comma. Etc: {@code host1:2181,host2:2181}</p>
      */
-    private String serverLists;
+    private final String serverLists;
     
     /**
      * Namespace of zookeeper.
      */
-    private String namespace;
+    private final String namespace;
     
     /**
      * Base sleep time milliseconds.

@@ -17,20 +17,17 @@
 
 package io.shardingjdbc.core.jdbc.core.datasource;
 
-import io.shardingjdbc.core.api.ConfigMapContext;
+import io.shardingjdbc.core.rule.ShardingRule;
 import io.shardingjdbc.core.constant.ShardingProperties;
 import io.shardingjdbc.core.constant.ShardingPropertiesConstant;
 import io.shardingjdbc.core.executor.ExecutorEngine;
 import io.shardingjdbc.core.jdbc.adapter.AbstractDataSourceAdapter;
 import io.shardingjdbc.core.jdbc.core.ShardingContext;
 import io.shardingjdbc.core.jdbc.core.connection.ShardingConnection;
-import io.shardingjdbc.core.rule.ShardingRule;
-import lombok.Getter;
+import com.google.common.base.Preconditions;
 
 import java.sql.SQLException;
-import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Database that support sharding.
@@ -39,7 +36,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ShardingDataSource extends AbstractDataSourceAdapter implements AutoCloseable {
     
-    @Getter
     private ShardingProperties shardingProperties;
     
     private ExecutorEngine executorEngine;
@@ -47,14 +43,11 @@ public class ShardingDataSource extends AbstractDataSourceAdapter implements Aut
     private ShardingContext shardingContext;
     
     public ShardingDataSource(final ShardingRule shardingRule) throws SQLException {
-        this(shardingRule, new ConcurrentHashMap<String, Object>(), new Properties());
+        this(shardingRule, new Properties());
     }
     
-    public ShardingDataSource(final ShardingRule shardingRule, final Map<String, Object> configMap, final Properties props) throws SQLException {
+    public ShardingDataSource(final ShardingRule shardingRule, final Properties props) throws SQLException {
         super(shardingRule.getDataSourceMap().values());
-        if (!configMap.isEmpty()) {
-            ConfigMapContext.getInstance().getShardingConfig().putAll(configMap);
-        }
         shardingProperties = new ShardingProperties(null == props ? new Properties() : props);
         int executorSize = shardingProperties.getValue(ShardingPropertiesConstant.EXECUTOR_SIZE);
         executorEngine = new ExecutorEngine(executorSize);
@@ -70,6 +63,7 @@ public class ShardingDataSource extends AbstractDataSourceAdapter implements Aut
      * @throws SQLException SQL exception
      */
     public void renew(final ShardingRule newShardingRule, final Properties newProps) throws SQLException {
+        Preconditions.checkState(getDatabaseType() == getDatabaseType(newShardingRule.getDataSourceMap().values()), "Cannot change database type dynamically.");
         ShardingProperties newShardingProperties = new ShardingProperties(null == newProps ? new Properties() : newProps);
         int originalExecutorSize = shardingProperties.getValue(ShardingPropertiesConstant.EXECUTOR_SIZE);
         int newExecutorSize = newShardingProperties.getValue(ShardingPropertiesConstant.EXECUTOR_SIZE);

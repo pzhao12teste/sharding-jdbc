@@ -34,12 +34,12 @@ public final class InlineShardingStrategyConfiguration implements ShardingStrate
     
     private final String shardingColumn;
     
-    private final String algorithmExpression;
+    private final String algorithmInlineExpression;
     
     @Override
     public ShardingStrategy build() {
         Preconditions.checkNotNull(shardingColumn, "Sharding column cannot be null.");
-        Preconditions.checkNotNull(algorithmExpression, "Algorithm inline expression cannot be null.");
-        return new InlineShardingStrategy(shardingColumn, algorithmExpression);
+        Preconditions.checkNotNull(algorithmInlineExpression, "Algorithm inline expression cannot be null.");
+        return new InlineShardingStrategy(shardingColumn, algorithmInlineExpression);
     }
 }

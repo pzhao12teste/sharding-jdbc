@@ -3,8 +3,6 @@ package io.shardingjdbc.core.parsing.parser.clause;
 import io.shardingjdbc.core.parsing.lexer.LexerEngine;
 import io.shardingjdbc.core.parsing.lexer.token.DefaultKeyword;
 import io.shardingjdbc.core.parsing.lexer.token.Symbol;
-import io.shardingjdbc.core.parsing.parser.clause.expression.BasicExpressionParser;
-import io.shardingjdbc.core.parsing.parser.dialect.ExpressionParserFactory;
 import io.shardingjdbc.core.parsing.parser.sql.dml.DMLStatement;
 import io.shardingjdbc.core.parsing.parser.token.TableToken;
 import io.shardingjdbc.core.util.SQLUtil;
@@ -18,11 +16,11 @@ public final class UpdateSetItemsClauseParser implements SQLClauseParser {
     
     private final LexerEngine lexerEngine;
     
-    private final BasicExpressionParser basicExpressionParser;
+    private final ExpressionClauseParser expressionClauseParser;
     
     public UpdateSetItemsClauseParser(final LexerEngine lexerEngine) {
         this.lexerEngine = lexerEngine;
-        basicExpressionParser = ExpressionParserFactory.createBasicExpressionParser(lexerEngine);
+        expressionClauseParser = new ExpressionClauseParser(lexerEngine);
     }
     
     /**
@@ -60,6 +58,6 @@ public final class UpdateSetItemsClauseParser implements SQLClauseParser {
     }
     
     private void parseSetValue(final DMLStatement updateStatement) {
-        basicExpressionParser.parse(updateStatement);
+        expressionClauseParser.parse(updateStatement);
     }
 }

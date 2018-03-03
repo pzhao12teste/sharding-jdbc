@@ -17,14 +17,48 @@
 
 package io.shardingjdbc.core.merger;
 
+import io.shardingjdbc.core.merger.groupby.GroupByMemoryResultSetMerger;
+import io.shardingjdbc.core.merger.groupby.GroupByStreamResultSetMerger;
+import io.shardingjdbc.core.merger.iterator.IteratorStreamResultSetMerger;
+import io.shardingjdbc.core.merger.limit.LimitDecoratorResultSetMerger;
+import io.shardingjdbc.core.merger.orderby.OrderByStreamResultSetMerger;
+import io.shardingjdbc.core.parsing.parser.sql.dql.select.SelectStatement;
+import io.shardingjdbc.core.util.SQLUtil;
+
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
- * result set merge engine.
+ * ResultSet merge engine.
  *
  * @author zhangliang
  */
-public interface MergeEngine {
+public final class MergeEngine {
+    
+    private final List<ResultSet> resultSets;
+    
+    private final SelectStatement selectStatement;
+    
+    private final Map<String, Integer> columnLabelIndexMap;
+    
+    public MergeEngine(final List<ResultSet> resultSets, final SelectStatement selectStatement) throws SQLException {
+        this.resultSets = resultSets;
+        this.selectStatement = selectStatement;
+        columnLabelIndexMap = getColumnLabelIndexMap(resultSets.get(0));
+    }
+    
+    private Map<String, Integer> getColumnLabelIndexMap(final ResultSet resultSet) throws SQLException {
+        ResultSetMetaData resultSetMetaData = resultSet.getMetaData();
+        Map<String, Integer> result = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
+        for (int i = 1; i <= resultSetMetaData.getColumnCount(); i++) {
+            result.put(SQLUtil.getExactlyValue(resultSetMetaData.getColumnLabel(i)), i);
+        }
+        return result;
+    }
     
     /**
      * Merge result sets.
@@ -32,5 +66,30 @@ public interface MergeEngine {
      * @return merged result set.
      * @throws SQLException SQL exception
      */
-    ResultSetMerger merge() throws SQLException;
+    public ResultSetMerger merge() throws SQLException {
+        selectStatement.setIndexForItems(columnLabelIndexMap);
+        return decorate(build());
+    }
+    
+    private ResultSetMerger build() throws SQLException {
+        if (!selectStatement.getGroupByItems().isEmpty() || !selectStatement.getAggregationSelectItems().isEmpty()) {
+            if (selectStatement.isSameGroupByAndOrderByItems()) {
+                return new GroupByStreamResultSetMerger(columnLabelIndexMap, resultSets, selectStatement);
+            } else {
+                return new GroupByMemoryResultSetMerger(columnLabelIndexMap, resultSets, selectStatement);
+            }
+        }
+        if (!selectStatement.getOrderByItems().isEmpty()) {
+            return new OrderByStreamResultSetMerger(resultSets, selectStatement.getOrderByItems());
+        }
+        return new IteratorStreamResultSetMerger(resultSets);
+    }
+    
+    private ResultSetMerger decorate(final ResultSetMerger resultSetMerger) throws SQLException {
+        ResultSetMerger result = resultSetMerger;
+        if (null != selectStatement.getLimit()) {
+            result = new LimitDecoratorResultSetMerger(result, selectStatement.getLimit());
+        }
+        return result;
+    }
 }

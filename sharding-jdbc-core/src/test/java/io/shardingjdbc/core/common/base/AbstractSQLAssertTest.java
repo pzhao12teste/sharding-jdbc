@@ -17,41 +17,35 @@
 
 package io.shardingjdbc.core.common.base;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import io.shardingjdbc.core.common.env.DatabaseEnvironment;
-import io.shardingjdbc.core.common.env.ShardingJdbcDatabaseTester;
 import io.shardingjdbc.core.common.env.ShardingTestStrategy;
 import io.shardingjdbc.core.common.util.SQLAssertHelper;
-import io.shardingjdbc.core.constant.DatabaseType;
-import io.shardingjdbc.core.constant.SQLType;
 import io.shardingjdbc.core.integrate.jaxb.SQLAssertData;
 import io.shardingjdbc.core.integrate.jaxb.SQLShardingRule;
+import io.shardingjdbc.core.integrate.jaxb.helper.SQLAssertJAXBHelper;
+import io.shardingjdbc.core.constant.DatabaseType;
+import io.shardingjdbc.core.constant.SQLType;
 import io.shardingjdbc.core.jdbc.adapter.AbstractDataSourceAdapter;
 import io.shardingjdbc.core.jdbc.core.datasource.MasterSlaveDataSource;
 import io.shardingjdbc.core.jdbc.core.datasource.ShardingDataSource;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import lombok.Getter;
 import org.dbunit.DatabaseUnitException;
-import org.dbunit.IDatabaseTester;
-import org.dbunit.dataset.IDataSet;
-import org.dbunit.dataset.xml.FlatXmlDataSetBuilder;
-import org.dbunit.operation.DatabaseOperation;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+@RunWith(Parameterized.class)
 public abstract class AbstractSQLAssertTest extends AbstractSQLTest {
     
     private final String testCaseName;
@@ -73,19 +67,9 @@ public abstract class AbstractSQLAssertTest extends AbstractSQLTest {
         sqlAssertHelper = new SQLAssertHelper(sql);
     }
     
-    protected static void importAllDataSet(final List<String> dataSetFiles) throws Exception {
-        for (DatabaseType databaseType : getDatabaseTypes()) {
-            DatabaseEnvironment dbEnv = new DatabaseEnvironment(databaseType);
-            for (String each : dataSetFiles) {
-                InputStream is = AbstractSQLTest.class.getClassLoader().getResourceAsStream(each);
-                IDataSet dataSet = new FlatXmlDataSetBuilder().build(new InputStreamReader(is));
-                IDatabaseTester databaseTester = new ShardingJdbcDatabaseTester(dbEnv.getDriverClassName(), dbEnv.getURL(getDatabaseName(each)),
-                        dbEnv.getUsername(), dbEnv.getPassword(), dbEnv.getSchema(getDatabaseName(each)));
-                databaseTester.setSetUpOperation(DatabaseOperation.CLEAN_INSERT);
-                databaseTester.setDataSet(dataSet);
-                databaseTester.onSetup();
-            }
-        }
+    @Parameterized.Parameters(name = "{0}In{2}")
+    public static Collection<Object[]> dataParameters() {
+        return SQLAssertJAXBHelper.getDataParameters("integrate/assert");
     }
     
     protected abstract ShardingTestStrategy getShardingStrategy();
@@ -105,50 +89,6 @@ public abstract class AbstractSQLAssertTest extends AbstractSQLTest {
     @Override
     public DatabaseType getCurrentDatabaseType() {
         return type;
-    }
-    
-    @Before
-    public void initDDLTables() throws SQLException {
-        if (getSql().startsWith("ALTER") || getSql().startsWith("TRUNCATE") || getSql().startsWith("DROP TABLE") || getSql().startsWith("CREATE UNIQUE INDEX") || getSql().startsWith("CREATE INDEX")) {
-            if (getSql().contains("TEMP")) {
-                executeSQL("CREATE TEMPORARY TABLE t_temp_log(id int, status varchar(10))");
-            } else {
-                executeSQL("CREATE TABLE t_log(id int, status varchar(10))");
-            }
-        }
-        if (getSql().startsWith("DROP INDEX")) {
-            executeSQL("CREATE TABLE t_log(id int, status varchar(10))");
-            executeSQL("CREATE INDEX t_log_index ON t_log(status)");
-        }
-    }
-    
-    @After
-    public void cleanupDDLTables() throws SQLException {
-        if (getSql().startsWith("CREATE UNIQUE INDEX") || getSql().startsWith("CREATE INDEX")) {
-            executeSQL("DROP TABLE t_log");
-        } else if (getSql().startsWith("ALTER") || getSql().startsWith("TRUNCATE") || getSql().startsWith("CREATE") || getSql().startsWith("DROP INDEX")) {
-            if (getSql().contains("TEMP")) {
-                executeSQL("DROP TABLE t_temp_log");
-            } else {
-                executeSQL("DROP TABLE t_log");
-            }
-        }
-    }
-    
-    private void executeSQL(final String sql) throws SQLException {
-        for (Map.Entry<DatabaseType, ? extends AbstractDataSourceAdapter> each : getDataSources().entrySet()) {
-            if (getCurrentDatabaseType() == each.getKey()) {
-                try (Connection conn = each.getValue().getConnection();
-                     Statement statement = conn.createStatement()) {
-                    statement.execute(sql);
-                    //CHECKSTYLE:OFF
-                } catch (final Exception ex) {
-                    //CHECKSTYLE:ON
-                    ex.printStackTrace();
-                    throw new RuntimeException(ex);
-                }
-            }
-        }
     }
     
     @Test
@@ -195,9 +135,9 @@ public abstract class AbstractSQLAssertTest extends AbstractSQLTest {
             for (SQLAssertData each : sqlShardingRule.getData()) {
                 File expectedDataSetFile = getExpectedFile(each.getExpected());
                 if (sql.toUpperCase().startsWith("SELECT")) {
-                    assertDQL(isPreparedStatement, isExecute, abstractDataSourceAdapter, each, expectedDataSetFile);
+                    assertDqlSql(isPreparedStatement, isExecute, abstractDataSourceAdapter, each, expectedDataSetFile);
                 } else  {
-                    assertDMLAndDDL(isPreparedStatement, isExecute, abstractDataSourceAdapter, each, expectedDataSetFile);
+                    assertDmlAndDdlSql(isPreparedStatement, isExecute, abstractDataSourceAdapter, each, expectedDataSetFile);
                 }
             }
         }
@@ -216,8 +156,8 @@ public abstract class AbstractSQLAssertTest extends AbstractSQLTest {
         return false;
     }
     
-    private void assertDQL(final boolean isPreparedStatement, final boolean isExecute, final AbstractDataSourceAdapter abstractDataSourceAdapter,
-                           final SQLAssertData data, final File expectedDataSetFile)
+    private void assertDqlSql(final boolean isPreparedStatement, final boolean isExecute, final AbstractDataSourceAdapter abstractDataSourceAdapter, 
+                              final SQLAssertData data, final File expectedDataSetFile)
             throws MalformedURLException, SQLException, DatabaseUnitException {
         if (isPreparedStatement) {
             sqlAssertHelper.executeQueryWithPreparedStatement(isExecute, abstractDataSourceAdapter, getParameters(data), expectedDataSetFile);
@@ -226,8 +166,8 @@ public abstract class AbstractSQLAssertTest extends AbstractSQLTest {
         }
     }
     
-    private void assertDMLAndDDL(final boolean isPreparedStatement, final boolean isExecute, final AbstractDataSourceAdapter abstractDataSourceAdapter,
-                                 final SQLAssertData data, final File expectedDataSetFile)
+    private void assertDmlAndDdlSql(final boolean isPreparedStatement, final boolean isExecute, final AbstractDataSourceAdapter abstractDataSourceAdapter, 
+                                    final SQLAssertData data, final File expectedDataSetFile)
             throws MalformedURLException, SQLException, DatabaseUnitException {
         if (isPreparedStatement) {
             sqlAssertHelper.executeWithPreparedStatement(isExecute, abstractDataSourceAdapter, getParameters(data));
@@ -266,4 +206,5 @@ public abstract class AbstractSQLAssertTest extends AbstractSQLTest {
     private List<String> getParameters(final SQLAssertData data) {
         return Strings.isNullOrEmpty(data.getParameter()) ? Collections.<String>emptyList() : Lists.newArrayList(data.getParameter().split(","));
     }
+    
 }

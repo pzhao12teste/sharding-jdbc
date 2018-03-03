@@ -17,7 +17,6 @@
 
 package io.shardingjdbc.core.parsing.parser.dialect.mysql.sql;
 
-import io.shardingjdbc.core.parsing.lexer.dialect.mysql.MySQLKeyword;
 import io.shardingjdbc.core.rule.ShardingRule;
 import io.shardingjdbc.core.parsing.lexer.token.DefaultKeyword;
 import io.shardingjdbc.core.parsing.lexer.token.Keyword;
@@ -43,10 +42,5 @@ public final class MySQLCreateParser extends AbstractCreateParser {
     @Override
     protected Keyword[] getSkippedKeywordsBetweenCreateTableAndTableName() {
         return new Keyword[] {DefaultKeyword.IF, DefaultKeyword.NOT, DefaultKeyword.EXISTS};
-    }
-    
-    @Override
-    protected Keyword[] getSkippedKeywordsBetweenCreateIndexAndKeyword() {
-        return new Keyword[] {DefaultKeyword.UNIQUE, DefaultKeyword.FULLTEXT, MySQLKeyword.SPATIAL};
     }
 }

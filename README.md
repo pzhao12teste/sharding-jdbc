@@ -1,18 +1,14 @@
 # Sharding-JDBC - JDBC driver for shard databases and tables 
 
-[![Build Status](https://secure.travis-ci.org/shardingjdbc/sharding-jdbc.png?branch=master)](https://travis-ci.org/shardingjdbc/sharding-jdbc)
-[![Maven Status](https://maven-badges.herokuapp.com/maven-central/io.shardingjdbc/sharding-jdbc/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.shardingjdbc/sharding-jdbc)
-[![Coverage Status](https://codecov.io/github/shardingjdbc/sharding-jdbc/coverage.svg?branch=master)](https://codecov.io/github/shardingjdbc/sharding-jdbc?branch=master)
-[![OpenTracing-1.0 Badge](https://img.shields.io/badge/OpenTracing--1.0-enabled-blue.svg)](http://opentracing.io)
-[![Skywalking Tracing](https://img.shields.io/badge/Skywalking%20Tracing-enable-brightgreen.svg)](https://github.com/OpenSkywalking/skywalking)
-[![GitHub release](https://img.shields.io/github/release/shardingjdbc/sharding-jdbc.svg)](https://github.com/shardingjdbc/sharding-jdbc/releases)
-[![Gitter](https://badges.gitter.im/Sharding-JDBC/shardingjdbc.svg)](https://gitter.im/Sharding-JDBC/shardingjdbc?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-[![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
-[![GitHub release](https://img.shields.io/badge/release-download-orange.svg)](https://github.com/shardingjdbc/sharding-jdbc-doc/raw/master/dist/sharding-jdbc-server-2.1.0-SNAPSHOT-assembly.tar.gz)
-
 # [Homepage](http://shardingjdbc.io/)
 
 # [中文主页](http://shardingjdbc.io/index_zh.html)
+
+[![Build Status](https://secure.travis-ci.org/shardingjdbc/sharding-jdbc.png?branch=master)](https://travis-ci.org/shardingjdbc/sharding-jdbc)
+[![Maven Status](https://maven-badges.herokuapp.com/maven-central/com.dangdang/sharding-jdbc/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.dangdang/sharding-jdbc)
+[![Coverage Status](https://coveralls.io/repos/shardingjdbc/sharding-jdbc/badge.svg?branch=master&service=github)](https://coveralls.io/github/shardingjdbc/sharding-jdbc?branch=master)
+[![GitHub release](https://img.shields.io/github/release/shardingjdbc/sharding-jdbc.svg)](https://github.com/shardingjdbc/sharding-jdbc/releases)
+[![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
 
 # Overview
 
@@ -49,14 +45,14 @@ Sharding-JDBC is a JDBC extension, provides distributed features such as shardin
 * YAML
 * Inline expression
 
-## 7. Orchestration
-* Configuration center, can support data sources, tables and sharding strategies switch dynamically.
-* Smart client to orchestrate data access service, can failover automatically.
-* Output apm information based on open tracing protocol.
+## 7. Orchestration (new feature for 2.0)
+* Configuration center, can support data sources, tables and sharding strategies switch dynamically. (2.0.0.M1)
+* Smart client to orchestrate data access service, can failover automatically (2.0.0.M2)
+* Output apm information based on open tracing protocol (2.0.0.M3)
 
 # Architecture
 
-![Architecture](http://ovfotjrsi.bkt.clouddn.com/docs/img/architecture_en_v2.png)
+![Architecture](http://ovfotjrsi.bkt.clouddn.com/docs/img/architecture_en.png)
 
 # [Release Notes](https://github.com/shardingjdbc/sharding-jdbc/releases)
 
@@ -83,7 +79,7 @@ Sharding-JDBC is a JDBC extension, provides distributed features such as shardin
     Map<String, DataSource> dataSourceMap = new HashMap<>();
     
     BasicDataSource dataSource1 = new BasicDataSource();
-    dataSource1.setDriverClassName("com.mysql.jdbc.Driver");
+    dataSource2.setDriverClassName("com.mysql.jdbc.Driver");
     dataSource1.setUrl("jdbc:mysql://localhost:3306/ds_0");
     dataSource1.setUsername("root");
     dataSource1.setPassword("");
@@ -126,28 +122,27 @@ dataSources:
     username: root
     password: 
 
-shardingRule:
-  tables:
-    t_order: 
-      actualDataNodes: ds_${0..1}.t_order_${0..1}
-      databaseStrategy: 
-        inline:
-          shardingColumn: user_id
-          algorithmExpression: ds_${user_id % 2}
-      tableStrategy: 
-        inline:
-          shardingColumn: order_id
-          algorithmExpression: t_order_${order_id % 2}
-    t_order_item: 
-      actualDataNodes: ds_${0..1}.t_order_item_${0..1}
-      databaseStrategy: 
-        inline:
-          shardingColumn: user_id
-          algorithmExpression: ds_${user_id % 2}
-      tableStrategy: 
-        inline:
-          shardingColumn: order_id
-          algorithmExpression: t_order_item_${order_id % 2}  
+tables:
+  t_order: 
+    actualDataNodes: ds_${0..1}.t_order_${0..1}
+    databaseStrategy: 
+      inline:
+        shardingColumn: user_id
+        algorithmInlineExpression: ds_${user_id % 2}
+    tableStrategy: 
+      inline:
+        shardingColumn: order_id
+        algorithmInlineExpression: t_order_${order_id % 2}
+  t_order_item: 
+    actualDataNodes: ds_${0..1}.t_order_item_${0..1}
+    databaseStrategy: 
+      inline:
+        shardingColumn: user_id
+        algorithmInlineExpression: ds_${user_id % 2}
+    tableStrategy: 
+      inline:
+        shardingColumn: order_id
+        algorithmInlineExpression: t_order_item_${order_id % 2}
 ```
 
 ```java

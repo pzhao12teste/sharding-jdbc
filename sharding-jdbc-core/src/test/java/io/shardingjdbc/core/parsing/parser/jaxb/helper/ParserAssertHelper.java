@@ -1,6 +1,5 @@
 package io.shardingjdbc.core.parsing.parser.jaxb.helper;
 
-import io.shardingjdbc.core.constant.DatabaseType;
 import io.shardingjdbc.core.constant.ShardingOperator;
 import io.shardingjdbc.core.parsing.parser.context.OrderItem;
 import io.shardingjdbc.core.parsing.parser.context.condition.Column;
@@ -13,7 +12,6 @@ import io.shardingjdbc.core.parsing.parser.expression.SQLPlaceholderExpression;
 import io.shardingjdbc.core.parsing.parser.expression.SQLTextExpression;
 import io.shardingjdbc.core.parsing.parser.jaxb.Value;
 import io.shardingjdbc.core.parsing.parser.token.GeneratedKeyToken;
-import io.shardingjdbc.core.parsing.parser.token.IndexToken;
 import io.shardingjdbc.core.parsing.parser.token.ItemsToken;
 import io.shardingjdbc.core.parsing.parser.token.MultipleInsertValuesToken;
 import io.shardingjdbc.core.parsing.parser.token.OffsetToken;
@@ -21,7 +19,8 @@ import io.shardingjdbc.core.parsing.parser.token.OrderByToken;
 import io.shardingjdbc.core.parsing.parser.token.RowCountToken;
 import io.shardingjdbc.core.parsing.parser.token.SQLToken;
 import io.shardingjdbc.core.parsing.parser.token.TableToken;
-import org.apache.commons.lang3.builder.EqualsBuilder;
+
+import org.mockito.internal.matchers.apachecommons.ReflectionEquals;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -35,16 +34,14 @@ import static org.junit.Assert.assertTrue;
 public class ParserAssertHelper {
     
     public static void assertTables(final io.shardingjdbc.core.parsing.parser.jaxb.Tables expected, final io.shardingjdbc.core.parsing.parser.context.table.Tables actual) {
-        assertTrue(EqualsBuilder.reflectionEquals(ParserJAXBHelper.getTables(expected), actual));
+        assertTrue(new ReflectionEquals(ParserJAXBHelper.getTables(expected)).matches(actual));
     }
     
-    public static void assertConditions(
-            final io.shardingjdbc.core.parsing.parser.jaxb.Conditions expected, final io.shardingjdbc.core.parsing.parser.context.condition.Conditions actual, final boolean isPreparedStatement) {
-        assertTrue(EqualsBuilder.reflectionEquals(buildExpectedConditions(expected, isPreparedStatement), actual));
+    public static void assertConditions(final io.shardingjdbc.core.parsing.parser.jaxb.Conditions expected, final io.shardingjdbc.core.parsing.parser.context.condition.Conditions actual, final boolean isPreparedStatement) {
+        assertTrue(new ReflectionEquals(buildExpectedConditions(expected, isPreparedStatement)).matches(actual));
     }
     
-    private static io.shardingjdbc.core.parsing.parser.context.condition.Conditions buildExpectedConditions(
-            final io.shardingjdbc.core.parsing.parser.jaxb.Conditions conditions, final boolean isPreparedStatement) {
+    private static io.shardingjdbc.core.parsing.parser.context.condition.Conditions buildExpectedConditions(final io.shardingjdbc.core.parsing.parser.jaxb.Conditions conditions, final boolean isPreparedStatement) {
         io.shardingjdbc.core.parsing.parser.context.condition.Conditions result = new io.shardingjdbc.core.parsing.parser.context.condition.Conditions();
         if (null == conditions) {
             return result;
@@ -59,7 +56,7 @@ public class ParserAssertHelper {
                     if (valueWithType instanceof Number) {
                         sqlExpressions.add(new SQLNumberExpression((Number) valueWithType));
                     } else {
-                        sqlExpressions.add(new SQLTextExpression(null == valueWithType ? "" : valueWithType.toString()));
+                        sqlExpressions.add(new SQLTextExpression(valueWithType == null ? "" : valueWithType.toString()));
                     }
                 }
             }
@@ -69,8 +66,7 @@ public class ParserAssertHelper {
                     condition = new io.shardingjdbc.core.parsing.parser.context.condition.Condition(new Column(each.getColumnName(), each.getTableName()), sqlExpressions.get(0));
                     break;
                 case BETWEEN:
-                    condition = new io.shardingjdbc.core.parsing.parser.context.condition.Condition(
-                            new Column(each.getColumnName(), each.getTableName()), sqlExpressions.get(0), sqlExpressions.get(1));
+                    condition = new io.shardingjdbc.core.parsing.parser.context.condition.Condition(new Column(each.getColumnName(), each.getTableName()), sqlExpressions.get(0), sqlExpressions.get(1));
                     break;
                 case IN:
                     condition = new io.shardingjdbc.core.parsing.parser.context.condition.Condition(new Column(each.getColumnName(), each.getTableName()), sqlExpressions);
@@ -87,29 +83,24 @@ public class ParserAssertHelper {
         if (null == expected || expected.size() == 0) {
             return;
         }
-        List<SQLToken> expectedSqlTokens = buildExpectedSqlTokens(expected, isPreparedStatement);
-        assertTrue(expectedSqlTokens.size() == actual.size());
+        List<io.shardingjdbc.core.parsing.parser.jaxb.SQLToken> filteredSqlTokens = filterSqlToken(expected, isPreparedStatement);
+        Iterator<io.shardingjdbc.core.parsing.parser.jaxb.SQLToken> sqlTokenIterator = filteredSqlTokens.iterator();
         for (SQLToken each : actual) {
-            boolean hasData = false;
-            for (SQLToken sqlToken : expectedSqlTokens) {
-                if (each.getBeginPosition() == sqlToken.getBeginPosition()) {
-                    hasData = true;
-                    assertTrue(EqualsBuilder.reflectionEquals(sqlToken, each));
-                }
-            }
-            assertTrue(hasData);
+            SQLToken sqlToken = buildExpectedSQLToken(sqlTokenIterator.next(), isPreparedStatement);
+            assertTrue(new ReflectionEquals(sqlToken).matches(each));
         }
+        assertFalse(sqlTokenIterator.hasNext());
     }
     
-    private static List<SQLToken> buildExpectedSqlTokens(final List<io.shardingjdbc.core.parsing.parser.jaxb.SQLToken> sqlTokens,
+    private static List<io.shardingjdbc.core.parsing.parser.jaxb.SQLToken> filterSqlToken(final List<io.shardingjdbc.core.parsing.parser.jaxb.SQLToken> sqlTokens,
             final boolean isPreparedStatement) {
-        List<SQLToken> result = new ArrayList<>(sqlTokens.size());
+        List<io.shardingjdbc.core.parsing.parser.jaxb.SQLToken> result = new ArrayList<>(sqlTokens.size());
         for (io.shardingjdbc.core.parsing.parser.jaxb.SQLToken each : sqlTokens) {
             if (isPreparedStatement && (each instanceof io.shardingjdbc.core.parsing.parser.jaxb.OffsetToken 
                     || each instanceof io.shardingjdbc.core.parsing.parser.jaxb.RowCountToken)) {
                 continue;
             }
-            result.add(buildExpectedSQLToken(each, isPreparedStatement));
+            result.add(each);
         }
         return result;
     }
@@ -117,10 +108,6 @@ public class ParserAssertHelper {
     private static SQLToken buildExpectedSQLToken(final io.shardingjdbc.core.parsing.parser.jaxb.SQLToken sqlToken, final boolean isPreparedStatement) {
         if (sqlToken instanceof io.shardingjdbc.core.parsing.parser.jaxb.TableToken) {
             return new TableToken(sqlToken.getBeginPosition(), ((io.shardingjdbc.core.parsing.parser.jaxb.TableToken) sqlToken).getOriginalLiterals());
-        }
-        if (sqlToken instanceof io.shardingjdbc.core.parsing.parser.jaxb.IndexToken) {
-            return new IndexToken(sqlToken.getBeginPosition(), ((io.shardingjdbc.core.parsing.parser.jaxb.IndexToken) sqlToken).getOriginalLiterals(), 
-                    ((io.shardingjdbc.core.parsing.parser.jaxb.IndexToken) sqlToken).getTableName());
         } else if (sqlToken instanceof io.shardingjdbc.core.parsing.parser.jaxb.ItemsToken) {
             ItemsToken itemsToken = new ItemsToken(sqlToken.getBeginPosition());
             itemsToken.getItems().addAll(((io.shardingjdbc.core.parsing.parser.jaxb.ItemsToken) sqlToken).getItems());
@@ -156,10 +143,10 @@ public class ParserAssertHelper {
             return;
         }
         if (null != expected.getRowCount()) {
-            assertTrue(EqualsBuilder.reflectionEquals(expected.getRowCount(), actual.getRowCount(), "boundOpened"));
+            assertTrue(new ReflectionEquals(expected.getRowCount()).matches(actual.getRowCount()));
         }
         if (null != expected.getOffset()) {
-            assertTrue(EqualsBuilder.reflectionEquals(expected.getOffset(), actual.getOffset(), "boundOpened"));
+            assertTrue(new ReflectionEquals(expected.getOffset()).matches(actual.getOffset()));
         }
     }
     
@@ -167,21 +154,21 @@ public class ParserAssertHelper {
         if (null == limit) {
             return null;
         }
-        Limit result = new Limit(DatabaseType.MySQL);
+        Limit result = new Limit(true);
         if (isPreparedStatement) {
             if (null != limit.getOffsetParameterIndex()) {
-                result.setOffset(new LimitValue(-1, limit.getOffsetParameterIndex(), true));
+                result.setOffset(new LimitValue(-1, limit.getOffsetParameterIndex()));
             }
             if (null != limit.getRowCountParameterIndex()) {
-                result.setRowCount(new LimitValue(-1, limit.getRowCountParameterIndex(), false));
+                result.setRowCount(new LimitValue(-1, limit.getRowCountParameterIndex()));
             }
         } else {
             if (null != limit.getOffset()) {
-                result.setOffset(new LimitValue(limit.getOffset(), -1, true));
+                result.setOffset(new LimitValue(limit.getOffset(), -1));
                 
             }
             if (null != limit.getRowCount()) {
-                result.setRowCount(new LimitValue(limit.getRowCount(), -1, false));
+                result.setRowCount(new LimitValue(limit.getRowCount(), -1));
             }
         }
         return result;
@@ -192,7 +179,7 @@ public class ParserAssertHelper {
         for (OrderItem each : actual) {
             OrderItem expectedOrderItem = orderByColumns.next();
             // TODO assert nullOrderType
-            assertTrue(EqualsBuilder.reflectionEquals(expectedOrderItem, each, "nullOrderType"));
+            assertTrue(new ReflectionEquals(expectedOrderItem, "nullOrderType").matches(each));
         }
         assertFalse(orderByColumns.hasNext());
     }
@@ -202,7 +189,7 @@ public class ParserAssertHelper {
         for (OrderItem each : actual) {
             OrderItem groupByColumn = groupByColumns.next();
             // TODO assert nullOrderType
-            assertTrue(EqualsBuilder.reflectionEquals(groupByColumn, each, "nullOrderType"));
+            assertTrue(new ReflectionEquals(groupByColumn, "nullOrderType").matches(each));
         }
         assertFalse(groupByColumns.hasNext());
     }
@@ -211,9 +198,9 @@ public class ParserAssertHelper {
         Iterator<AggregationSelectItem> aggregationSelectItems = expected.iterator();
         for (AggregationSelectItem each : actual) {
             AggregationSelectItem aggregationSelectItem = aggregationSelectItems.next();
-            assertTrue(EqualsBuilder.reflectionEquals(aggregationSelectItem, each, "derivedAggregationSelectItems"));
+            assertTrue(new ReflectionEquals(aggregationSelectItem, "derivedAggregationSelectItems").matches(each));
             for (int i = 0; i < each.getDerivedAggregationSelectItems().size(); i++) {
-                assertTrue(EqualsBuilder.reflectionEquals(aggregationSelectItem.getDerivedAggregationSelectItems().get(i), each.getDerivedAggregationSelectItems().get(i)));
+                assertTrue(new ReflectionEquals(aggregationSelectItem.getDerivedAggregationSelectItems().get(i)).matches(each.getDerivedAggregationSelectItems().get(i)));
             }
         }
         assertFalse(aggregationSelectItems.hasNext());

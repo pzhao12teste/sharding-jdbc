@@ -17,45 +17,35 @@
 
 package io.shardingjdbc.core.common.base;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.Sets;
 import io.shardingjdbc.core.common.env.DatabaseEnvironment;
 import io.shardingjdbc.core.common.env.ShardingJdbcDatabaseTester;
 import io.shardingjdbc.core.constant.DatabaseType;
-import io.shardingjdbc.core.constant.SQLType;
-import io.shardingjdbc.core.integrate.jaxb.helper.SQLAssertJAXBHelper;
-import io.shardingjdbc.core.jdbc.core.ShardingContext;
-import io.shardingjdbc.core.jdbc.core.datasource.MasterSlaveDataSource;
-import io.shardingjdbc.core.jdbc.core.datasource.ShardingDataSource;
+import com.google.common.base.Strings;
+import com.google.common.collect.Sets;
 import org.apache.commons.dbcp.BasicDataSource;
 import org.dbunit.IDatabaseTester;
 import org.dbunit.dataset.IDataSet;
 import org.dbunit.dataset.xml.FlatXmlDataSetBuilder;
 import org.dbunit.operation.DatabaseOperation;
 import org.h2.tools.RunScript;
-import org.junit.AfterClass;
+import org.junit.Before;
 
 import javax.sql.DataSource;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
 public abstract class AbstractSQLTest {
-    
-    private static Map<DatabaseType, ShardingDataSource> shardingDataSources = new HashMap<>();
     
     private static Set<DatabaseType> databaseTypes = Sets.newHashSet(DatabaseType.H2);
     
@@ -65,15 +55,11 @@ public abstract class AbstractSQLTest {
         init();
     }
     
-    protected static Map<DatabaseType, ShardingDataSource> getShardingDataSources() {
-        return shardingDataSources;
-    }
-    
     private static synchronized void init() {
         try {
             Properties prop = new Properties();
             prop.load(AbstractSQLTest.class.getClassLoader().getResourceAsStream("integrate/env.properties"));
-            boolean initialized = null == prop.getProperty("initialized") ? false : Boolean.valueOf(prop.getProperty("initialized"));
+            boolean initialized = prop.getProperty("initialized") == null ? false : Boolean.valueOf(prop.getProperty("initialized"));
             String databases = prop.getProperty("databases");
             if (!Strings.isNullOrEmpty(databases)) {
                 for (String each : databases.split(",")) {
@@ -155,34 +141,22 @@ public abstract class AbstractSQLTest {
         return databaseTypes;
     }
     
-    protected static String getDatabaseName(final String dataSetFile) {
-        String fileName = new File(dataSetFile).getName();
-        if (-1 == fileName.lastIndexOf(".")) {
-            return fileName;
+    @Before
+    public final void importDataSet() throws Exception {
+        for (DatabaseType databaseType : getDatabaseTypes()) {
+            if (databaseType == getCurrentDatabaseType() || null == getCurrentDatabaseType()) {
+                DatabaseEnvironment dbEnv = new DatabaseEnvironment(databaseType);
+                for (String each : getInitDataSetFiles()) {
+                    InputStream is = AbstractSQLTest.class.getClassLoader().getResourceAsStream(each);
+                    IDataSet dataSet = new FlatXmlDataSetBuilder().build(new InputStreamReader(is));
+                    IDatabaseTester databaseTester = new ShardingJdbcDatabaseTester(dbEnv.getDriverClassName(), dbEnv.getURL(getDatabaseName(each)),
+                            dbEnv.getUsername(), dbEnv.getPassword(), dbEnv.getSchema(getDatabaseName(each)));
+                    databaseTester.setSetUpOperation(DatabaseOperation.CLEAN_INSERT);
+                    databaseTester.setDataSet(dataSet);
+                    databaseTester.onSetup();
+                }
+            }
         }
-        return fileName.substring(0, fileName.lastIndexOf("."));
-    }
-    
-    protected static Collection<Object[]> dataParameters(final SQLType... sqlTypes) {
-        Collection<Object[]> result = new LinkedList<>();
-        for (SQLType each : sqlTypes) {
-            result.addAll(SQLAssertJAXBHelper.getDataParameters("integrate/assert", each));
-        }
-        return result;
-    }
-    
-    private static BasicDataSource buildDataSource(final String dbName, final DatabaseType type) {
-        DatabaseEnvironment dbEnv = new DatabaseEnvironment(type);
-        BasicDataSource result = new BasicDataSource();
-        result.setDriverClassName(dbEnv.getDriverClassName());
-        result.setUrl(dbEnv.getURL(dbName));
-        result.setUsername(dbEnv.getUsername());
-        result.setPassword(dbEnv.getPassword());
-        result.setMaxActive(1);
-        if (DatabaseType.Oracle == dbEnv.getDatabaseType()) {
-            result.setConnectionInitSqls(Collections.singleton("ALTER SESSION SET CURRENT_SCHEMA = " + dbName));
-        }
-        return result;
     }
     
     protected abstract List<String> getInitDataSetFiles();
@@ -203,15 +177,18 @@ public abstract class AbstractSQLTest {
         return buildDataSource(dbName, type).getConnection();
     }
     
-    @AfterClass
-    public static void clear() throws SQLException, NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
-        if (!shardingDataSources.isEmpty()) {
-            for (ShardingDataSource each : shardingDataSources.values()) {
-                each.close();
-                closeDataSources(getDataSourceMap(each).values());
-            }
-            shardingDataSources.clear();
+    private static BasicDataSource buildDataSource(final String dbName, final DatabaseType type) {
+        DatabaseEnvironment dbEnv = new DatabaseEnvironment(type);
+        BasicDataSource result = new BasicDataSource();
+        result.setDriverClassName(dbEnv.getDriverClassName());
+        result.setUrl(dbEnv.getURL(dbName));
+        result.setUsername(dbEnv.getUsername());
+        result.setPassword(dbEnv.getPassword());
+        result.setMaxActive(1000);
+        if (DatabaseType.Oracle == dbEnv.getDatabaseType()) {
+            result.setConnectionInitSqls(Collections.singleton("ALTER SESSION SET CURRENT_SCHEMA = " + dbName));
         }
+        return result;
     }
     
     private void createDataSources(final String dbName, final DatabaseType type) {
@@ -225,38 +202,11 @@ public abstract class AbstractSQLTest {
         dataSourceMap.put(dataSource, result);
     }
     
-    private static Map<String, DataSource> getDataSourceMap(final ShardingDataSource shardingDataSource)
-            throws NoSuchFieldException, SecurityException, IllegalArgumentException, IllegalAccessException {
-        Field field = shardingDataSource.getClass().getDeclaredField("shardingContext");
-        field.setAccessible(true);
-        ShardingContext shardingContext = (ShardingContext) field.get(shardingDataSource);
-        return shardingContext.getShardingRule().getDataSourceMap();
-    }
-    
-    private static void closeDataSources(final Collection<DataSource> dataSources) throws SQLException {
-        for (DataSource each : dataSources) {
-            if (each instanceof BasicDataSource) {
-                ((BasicDataSource) each).close();
-            } else if (each instanceof MasterSlaveDataSource) {
-                closeDataSources(((MasterSlaveDataSource) each).getAllDataSources().values());
-            }
+    private String getDatabaseName(final String dataSetFile) {
+        String fileName = new File(dataSetFile).getName();
+        if (-1 == fileName.lastIndexOf(".")) {
+            return fileName;
         }
-    }
-    
-    protected final void importDataSet() throws Exception {
-        for (DatabaseType databaseType : getDatabaseTypes()) {
-            if (databaseType == getCurrentDatabaseType() || null == getCurrentDatabaseType()) {
-                DatabaseEnvironment dbEnv = new DatabaseEnvironment(databaseType);
-                for (String each : getInitDataSetFiles()) {
-                    InputStream is = AbstractSQLTest.class.getClassLoader().getResourceAsStream(each);
-                    IDataSet dataSet = new FlatXmlDataSetBuilder().build(new InputStreamReader(is));
-                    IDatabaseTester databaseTester = new ShardingJdbcDatabaseTester(dbEnv.getDriverClassName(), dbEnv.getURL(getDatabaseName(each)),
-                            dbEnv.getUsername(), dbEnv.getPassword(), dbEnv.getSchema(getDatabaseName(each)));
-                    databaseTester.setSetUpOperation(DatabaseOperation.CLEAN_INSERT);
-                    databaseTester.setDataSet(dataSet);
-                    databaseTester.onSetup();
-                }
-            }
-        }
+        return fileName.substring(0, fileName.lastIndexOf("."));
     }
 }

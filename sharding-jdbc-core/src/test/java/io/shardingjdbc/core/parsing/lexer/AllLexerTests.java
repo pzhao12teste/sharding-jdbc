@@ -17,8 +17,6 @@
 
 package io.shardingjdbc.core.parsing.lexer;
 
-import io.shardingjdbc.core.parsing.lexer.analyzer.CharTypeTest;
-import io.shardingjdbc.core.parsing.lexer.analyzer.TokenizerTest;
 import io.shardingjdbc.core.parsing.lexer.dialect.mysql.MySQLLexerTest;
 import io.shardingjdbc.core.parsing.lexer.dialect.oracle.OracleLexerTest;
 import io.shardingjdbc.core.parsing.lexer.dialect.postgresql.PostgreSQLLexerTest;
@@ -28,8 +26,6 @@ import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-        CharTypeTest.class,
-        TokenizerTest.class,
         LexerTest.class,
         MySQLLexerTest.class,
         OracleLexerTest.class,

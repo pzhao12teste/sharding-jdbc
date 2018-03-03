@@ -55,7 +55,10 @@ public abstract class AbstractConnectionAdapter extends AbstractUnsupportedOpera
     @Override
     public final void setAutoCommit(final boolean autoCommit) throws SQLException {
         this.autoCommit = autoCommit;
-        recordMethodInvocation(Connection.class, "setAutoCommit", new Class[] {boolean.class}, new Object[] {autoCommit});
+        if (cachedConnections.isEmpty()) {
+            recordMethodInvocation(Connection.class, "setAutoCommit", new Class[] {boolean.class}, new Object[] {autoCommit});
+            return;
+        }
         for (Connection each : cachedConnections.values()) {
             each.setAutoCommit(autoCommit);
         }
@@ -114,7 +117,10 @@ public abstract class AbstractConnectionAdapter extends AbstractUnsupportedOpera
     @Override
     public final void setReadOnly(final boolean readOnly) throws SQLException {
         this.readOnly = readOnly;
-        recordMethodInvocation(Connection.class, "setReadOnly", new Class[] {boolean.class}, new Object[] {readOnly});
+        if (cachedConnections.isEmpty()) {
+            recordMethodInvocation(Connection.class, "setReadOnly", new Class[] {boolean.class}, new Object[] {readOnly});
+            return;
+        }
         for (Connection each : cachedConnections.values()) {
             each.setReadOnly(readOnly);
         }
@@ -128,7 +134,10 @@ public abstract class AbstractConnectionAdapter extends AbstractUnsupportedOpera
     @Override
     public final void setTransactionIsolation(final int level) throws SQLException {
         transactionIsolation = level;
-        recordMethodInvocation(Connection.class, "setTransactionIsolation", new Class[] {int.class}, new Object[] {level});
+        if (cachedConnections.isEmpty()) {
+            recordMethodInvocation(Connection.class, "setTransactionIsolation", new Class[] {int.class}, new Object[] {level});
+            return;
+        }
         for (Connection each : cachedConnections.values()) {
             each.setTransactionIsolation(level);
         }

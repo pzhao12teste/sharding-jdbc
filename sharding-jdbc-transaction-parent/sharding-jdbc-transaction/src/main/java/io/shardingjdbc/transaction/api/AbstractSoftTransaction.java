@@ -63,7 +63,7 @@ public abstract class AbstractSoftTransaction {
      * @throws SQLException SQL exception
      */
     public final void end() throws SQLException {
-        if (null != connection) {
+        if (connection != null) {
             ExecutorExceptionHandler.setExceptionThrown(true);
             connection.setAutoCommit(previousAutoCommit);
             SoftTransactionManager.closeCurrentTransactionManager();

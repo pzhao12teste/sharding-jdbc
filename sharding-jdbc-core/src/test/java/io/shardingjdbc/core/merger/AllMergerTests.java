@@ -27,7 +27,7 @@ import io.shardingjdbc.core.merger.groupby.GroupByStreamResultSetMergerTest;
 import io.shardingjdbc.core.merger.groupby.GroupByValueTest;
 import io.shardingjdbc.core.merger.groupby.aggregation.AllAggregationTests;
 import io.shardingjdbc.core.merger.iterator.IteratorStreamResultSetMergerTest;
-import io.shardingjdbc.core.merger.pagination.LimitDecoratorResultSetMergerTest;
+import io.shardingjdbc.core.merger.limit.LimitDecoratorResultSetMergerTest;
 import io.shardingjdbc.core.merger.orderby.OrderByStreamResultSetMergerTest;
 import io.shardingjdbc.core.merger.orderby.OrderByValueTest;
 import io.shardingjdbc.core.merger.util.ResultSetUtilTest;
@@ -36,7 +36,7 @@ import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
-        SelectMergeEngineTest.class, 
+        MergeEngineTest.class, 
         StreamResultSetMergerTest.class, 
         MemoryResultSetMergerTest.class, 
         DecoratorResultSetMergerTest.class, 

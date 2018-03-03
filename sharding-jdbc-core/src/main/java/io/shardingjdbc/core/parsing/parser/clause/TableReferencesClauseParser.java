@@ -1,9 +1,5 @@
 package io.shardingjdbc.core.parsing.parser.clause;
 
-import com.google.common.base.Strings;
-import io.shardingjdbc.core.parsing.parser.clause.expression.AliasExpressionParser;
-import io.shardingjdbc.core.parsing.parser.clause.expression.BasicExpressionParser;
-import io.shardingjdbc.core.parsing.parser.dialect.ExpressionParserFactory;
 import io.shardingjdbc.core.rule.ShardingRule;
 import io.shardingjdbc.core.parsing.lexer.LexerEngine;
 import io.shardingjdbc.core.parsing.lexer.token.DefaultKeyword;
@@ -32,15 +28,15 @@ public class TableReferencesClauseParser implements SQLClauseParser {
     @Getter
     private final LexerEngine lexerEngine;
     
-    private final AliasExpressionParser aliasExpressionParser;
+    private final AliasClauseParser aliasClauseParser;
     
-    private final BasicExpressionParser basicExpressionParser;
+    private final ExpressionClauseParser expressionClauseParser;
     
     public TableReferencesClauseParser(final ShardingRule shardingRule, final LexerEngine lexerEngine) {
         this.shardingRule = shardingRule;
         this.lexerEngine = lexerEngine;
-        aliasExpressionParser = ExpressionParserFactory.createAliasExpressionParser(lexerEngine);
-        basicExpressionParser = ExpressionParserFactory.createBasicExpressionParser(lexerEngine);
+        aliasClauseParser = new AliasClauseParser(lexerEngine);
+        expressionClauseParser = new ExpressionClauseParser(lexerEngine);
     }
     
     /**
@@ -67,11 +63,8 @@ public class TableReferencesClauseParser implements SQLClauseParser {
             throw new UnsupportedOperationException("Cannot support SQL for `schema.table`");
         }
         String tableName = SQLUtil.getExactlyValue(literals);
-        if (Strings.isNullOrEmpty(tableName)) {
-            return;
-        }
-        Optional<String> alias = aliasExpressionParser.parseTableAlias();
-        if (isSingleTableOnly || shardingRule.tryFindTableRuleByLogicTable(tableName).isPresent() || shardingRule.findBindingTableRule(tableName).isPresent()
+        Optional<String> alias = aliasClauseParser.parse();
+        if (isSingleTableOnly || shardingRule.tryFindTableRule(tableName).isPresent() || shardingRule.findBindingTableRule(tableName).isPresent()
                 || shardingRule.getDataSourceMap().containsKey(shardingRule.getDefaultDataSourceName())) {
             sqlStatement.getSqlTokens().add(new TableToken(beginPosition, literals));
             sqlStatement.getTables().add(new Table(tableName, alias));
@@ -112,24 +105,12 @@ public class TableReferencesClauseParser implements SQLClauseParser {
     private void parseJoinCondition(final SQLStatement sqlStatement) {
         if (lexerEngine.skipIfEqual(DefaultKeyword.ON)) {
             do {
-                basicExpressionParser.parse(sqlStatement);
+                expressionClauseParser.parse(sqlStatement);
                 lexerEngine.accept(Symbol.EQ);
-                basicExpressionParser.parse(sqlStatement);
+                expressionClauseParser.parse(sqlStatement);
             } while (lexerEngine.skipIfEqual(DefaultKeyword.AND));
         } else if (lexerEngine.skipIfEqual(DefaultKeyword.USING)) {
             lexerEngine.skipParentheses(sqlStatement);
         }
-    }
-    
-    /**
-     * Parse single table without alias.
-     *
-     * @param sqlStatement SQL statement
-     */
-    public final void parseSingleTableWithoutAlias(final SQLStatement sqlStatement) {
-        int beginPosition = lexerEngine.getCurrentToken().getEndPosition() - lexerEngine.getCurrentToken().getLiterals().length();
-        sqlStatement.getSqlTokens().add(new TableToken(beginPosition, lexerEngine.getCurrentToken().getLiterals()));
-        sqlStatement.getTables().add(new Table(lexerEngine.getCurrentToken().getLiterals(), Optional.<String>absent()));
-        lexerEngine.nextToken();
     }
 }

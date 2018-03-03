@@ -1,21 +1,17 @@
 # Sharding-JDBC - 为分库分表而生的数据库访问层微服务框架 
 
-[![Build Status](https://secure.travis-ci.org/shardingjdbc/sharding-jdbc.png?branch=master)](https://travis-ci.org/shardingjdbc/sharding-jdbc)
-[![Maven Status](https://maven-badges.herokuapp.com/maven-central/io.shardingjdbc/sharding-jdbc/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.shardingjdbc/sharding-jdbc)
-[![Coverage Status](https://codecov.io/github/shardingjdbc/sharding-jdbc/coverage.svg?branch=master)](https://codecov.io/github/shardingjdbc/sharding-jdbc?branch=master)
-[![OpenTracing-1.0 Badge](https://img.shields.io/badge/OpenTracing--1.0-enabled-blue.svg)](http://opentracing.io)
-[![Skywalking Tracing](https://img.shields.io/badge/Skywalking%20Tracing-enable-brightgreen.svg)](https://github.com/OpenSkywalking/skywalking)
+[![Build Status](https://secure.travis-ci.org/shardingjdbc/sharding-jdbc.png?branch=master)](https://travis-ci.org/io.shardingjdbc/sharding-jdbc)
+[![Maven Status](https://maven-badges.herokuapp.com/maven-central/com.dangdang/sharding-jdbc/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.dangdang/sharding-jdbc)
+[![Coverage Status](https://coveralls.io/repos/shardingjdbc/sharding-jdbc/badge.svg?branch=master&service=github)](https://coveralls.io/github/shardingjdbc/sharding-jdbc?branch=master)
 [![GitHub release](https://img.shields.io/github/release/shardingjdbc/sharding-jdbc.svg)](https://github.com/shardingjdbc/sharding-jdbc/releases)
-[![Gitter](https://badges.gitter.im/Sharding-JDBC/shardingjdbc.svg)](https://gitter.im/Sharding-JDBC/shardingjdbc?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-[![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
-[![GitHub release](https://img.shields.io/badge/release-download-orange.svg)](https://github.com/shardingjdbc/sharding-jdbc-doc/raw/master/dist/sharding-jdbc-server-2.1.0-SNAPSHOT-assembly.tar.gz)
+[![Hex.pm](http://shardingjdbc.github.io/sharding-jdbc/img/license.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
+
 
 # [中文主页](http://shardingjdbc.io/index_zh.html)
 
 # 概述
 
 Sharding-JDBC定位为轻量级java框架，使用客户端直连数据库，以jar包形式提供服务，未使用中间层，无需额外部署，无其他依赖，DBA也无需改变原有的运维方式，可理解为增强版的JDBC驱动，旧代码迁移成本几乎为零。
-Sharding-JDBC-Server在其基础上增加了针对MySQL协议的代理端，对运维以及调试更加友好，可以使用任何兼容MySQL协议的访问客户端(如：MySQL Command Client, MySQL Workbench等)连接Sharding-JDBC-Server以查询和操作数据。
 
 # 功能列表
 
@@ -48,19 +44,14 @@ Sharding-JDBC-Server在其基础上增加了针对MySQL协议的代理端，对�
 * Spring命名空间
 * Spring boot starter
 
-## 7. 多样化的部署架构
-* Sharding-JDBC-Driver：通过客户端分片的方式由应用程序直连数据库，减少二次转发成本，性能最高，适合线上程序使用
-* Sharding-JDBC-Server：通过代理服务端分片的方式，由代理服务器连接数据库，适合运维以及调试时查询数据，可以结合各种MySQL客户端使用
-* Sharding-JDBC-Sidecar(TBD)：通过sidecar分片的方式，由IPC代替RPC，自动代理SQL分片，适合与Kubernetes配合使用
-
-## 8. 分布式治理能力
-* 配置集中化与动态化，可支持数据源、表与分片策略的动态切换
-* 客户端的数据库治理，数据源失效自动切换
-* 基于Open Tracing协议的APM信息输出
+## 7. 分布式治理能力 (2.0新功能)
+* 配置集中化与动态化，可支持数据源、表与分片策略的动态切换(2.0.0.M1)
+* 客户端的数据库治理，数据源失效自动切换(2.0.0.M2)
+* 基于Open Tracing协议的APM信息输出(2.0.0.M3)
 
 # Architecture
 
-![Architecture](http://ovfotjrsi.bkt.clouddn.com/docs/img/architecture_v2.png)
+![Architecture](http://ovfotjrsi.bkt.clouddn.com/docs/img/architecture.png)
 
 # [Release Notes](https://github.com/shardingjdbc/sharding-jdbc/releases)
 
@@ -89,7 +80,7 @@ Sharding-JDBC的分库分表通过规则配置描述，请简单浏览配置全�
     
     // 配置第一个数据源
     BasicDataSource dataSource1 = new BasicDataSource();
-    dataSource1.setDriverClassName("com.mysql.jdbc.Driver");
+    dataSource2.setDriverClassName("com.mysql.jdbc.Driver");
     dataSource1.setUrl("jdbc:mysql://localhost:3306/ds_0");
     dataSource1.setUsername("root");
     dataSource1.setPassword("");
@@ -139,28 +130,27 @@ dataSources:
     username: root
     password: 
 
-shardingRule:
-  tables:
-    t_order: 
-      actualDataNodes: ds_${0..1}.t_order_${0..1}
-      databaseStrategy: 
-        inline:
-          shardingColumn: user_id
-          algorithmExpression: ds_${user_id % 2}
-      tableStrategy: 
-        inline:
-          shardingColumn: order_id
-          algorithmExpression: t_order_${order_id % 2}
-    t_order_item: 
-      actualDataNodes: ds_${0..1}.t_order_item_${0..1}
-      databaseStrategy: 
-        inline:
-          shardingColumn: user_id
-          algorithmExpression: ds_${user_id % 2}
-      tableStrategy: 
-        inline:
-          shardingColumn: order_id
-          algorithmExpression: t_order_item_${order_id % 2}  
+tables:
+  t_order: 
+    actualDataNodes: ds_${0..1}.t_order_${0..1}
+    databaseStrategy: 
+      inline:
+        shardingColumn: user_id
+        algorithmInlineExpression: ds_${user_id % 2}
+    tableStrategy: 
+      inline:
+        shardingColumn: order_id
+        algorithmInlineExpression: t_order_${order_id % 2}
+  t_order_item: 
+    actualDataNodes: ds_${0..1}.t_order_item_${0..1}
+    databaseStrategy: 
+      inline:
+        shardingColumn: user_id
+        algorithmInlineExpression: ds_${user_id % 2}
+    tableStrategy: 
+      inline:
+        shardingColumn: order_id
+        algorithmInlineExpression: t_order_item_${order_id % 2}
 ```
 
 ```java

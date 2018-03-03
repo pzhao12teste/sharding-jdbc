@@ -14,7 +14,6 @@
             </condition>
         </conditions>
     </assert>
-    <!-- TODO cannot pass,add later 
     <assert id="assertSelectSubQueryMultiTableWithParentheses" parameters="1,2">
         <tables>
             <table name="t_order" alias="o" />
@@ -31,7 +30,6 @@
             </condition>
         </conditions>
     </assert>
-    -->
     <assert id="assertSelectSubQueryWithOrderBy">
         <tables>
             <table name="t_order"/>

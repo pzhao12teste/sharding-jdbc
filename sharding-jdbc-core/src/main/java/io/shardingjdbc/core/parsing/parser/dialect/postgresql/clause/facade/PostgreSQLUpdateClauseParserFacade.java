@@ -1,6 +1,5 @@
 package io.shardingjdbc.core.parsing.parser.dialect.postgresql.clause.facade;
 
-import io.shardingjdbc.core.constant.DatabaseType;
 import io.shardingjdbc.core.rule.ShardingRule;
 import io.shardingjdbc.core.parsing.lexer.LexerEngine;
 import io.shardingjdbc.core.parsing.parser.clause.UpdateSetItemsClauseParser;
@@ -16,6 +15,6 @@ import io.shardingjdbc.core.parsing.parser.dialect.postgresql.clause.PostgreSQLT
 public final class PostgreSQLUpdateClauseParserFacade extends AbstractUpdateClauseParserFacade {
     
     public PostgreSQLUpdateClauseParserFacade(final ShardingRule shardingRule, final LexerEngine lexerEngine) {
-        super(new PostgreSQLTableReferencesClauseParser(shardingRule, lexerEngine), new UpdateSetItemsClauseParser(lexerEngine), new WhereClauseParser(DatabaseType.PostgreSQL, lexerEngine));
+        super(new PostgreSQLTableReferencesClauseParser(shardingRule, lexerEngine), new UpdateSetItemsClauseParser(lexerEngine), new WhereClauseParser(lexerEngine));
     }
 }

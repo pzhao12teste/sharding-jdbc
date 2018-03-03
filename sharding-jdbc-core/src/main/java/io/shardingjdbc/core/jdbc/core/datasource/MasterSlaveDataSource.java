@@ -17,13 +17,12 @@
 
 package io.shardingjdbc.core.jdbc.core.datasource;
 
-import com.google.common.base.Preconditions;
-import io.shardingjdbc.core.api.ConfigMapContext;
 import io.shardingjdbc.core.constant.SQLType;
 import io.shardingjdbc.core.hint.HintManagerHolder;
 import io.shardingjdbc.core.jdbc.adapter.AbstractDataSourceAdapter;
 import io.shardingjdbc.core.jdbc.core.connection.MasterSlaveConnection;
 import io.shardingjdbc.core.rule.MasterSlaveRule;
+import com.google.common.base.Preconditions;
 import lombok.Getter;
 
 import javax.sql.DataSource;
@@ -31,6 +30,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -53,11 +53,8 @@ public class MasterSlaveDataSource extends AbstractDataSourceAdapter {
     
     private MasterSlaveRule masterSlaveRule;
     
-    public MasterSlaveDataSource(final MasterSlaveRule masterSlaveRule, final Map<String, Object> configMap) throws SQLException {
+    public MasterSlaveDataSource(final MasterSlaveRule masterSlaveRule) throws SQLException {
         super(getAllDataSources(masterSlaveRule.getMasterDataSource(), masterSlaveRule.getSlaveDataSourceMap().values()));
-        if (!configMap.isEmpty()) {
-            ConfigMapContext.getInstance().getMasterSlaveConfig().putAll(configMap);
-        }
         this.masterSlaveRule = masterSlaveRule;
     }
     
@@ -76,17 +73,6 @@ public class MasterSlaveDataSource extends AbstractDataSourceAdapter {
         Map<String, DataSource> result = new HashMap<>(masterSlaveRule.getSlaveDataSourceMap().size() + 1, 1);
         result.put(masterSlaveRule.getMasterDataSourceName(), masterSlaveRule.getMasterDataSource());
         result.putAll(masterSlaveRule.getSlaveDataSourceMap());
-        return result;
-    }
-    
-    /**
-     * Get all master data sources.
-     *
-     * @return map of actual master data source name and actual master data sources
-     */
-    public Map<String, DataSource> getMasterDataSource() {
-        Map<String, DataSource> result = new HashMap<>(1, 1);
-        result.put(masterSlaveRule.getMasterDataSourceName(), masterSlaveRule.getMasterDataSource());
         return result;
     }
     
@@ -124,8 +110,11 @@ public class MasterSlaveDataSource extends AbstractDataSourceAdapter {
      * Renew master-slave data source.
      *
      * @param masterSlaveRule new master-slave rule
+     * @throws SQLException SQL exception
      */
-    public void renew(final MasterSlaveRule masterSlaveRule) {
+    public void renew(final MasterSlaveRule masterSlaveRule) throws SQLException {
+        Preconditions.checkState(getDatabaseType() == getDatabaseType(Collections.singletonList(masterSlaveRule.getMasterDataSource())), "Cannot change database type dynamically.");
+        Preconditions.checkState(getDatabaseType() == getDatabaseType(masterSlaveRule.getSlaveDataSourceMap().values()), "Cannot change database type dynamically.");
         this.masterSlaveRule = masterSlaveRule;
     }
     

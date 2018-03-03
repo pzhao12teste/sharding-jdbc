@@ -17,7 +17,6 @@
 
 package io.shardingjdbc.core.parsing.parser.context.limit;
 
-import io.shardingjdbc.core.constant.DatabaseType;
 import io.shardingjdbc.core.parsing.parser.exception.SQLParsingException;
 import io.shardingjdbc.core.util.NumberUtil;
 import lombok.Getter;
@@ -39,7 +38,7 @@ import java.util.List;
 @ToString
 public final class Limit {
     
-    private final DatabaseType databaseType;
+    private final boolean rowCountRewriteFlag;
     
     private LimitValue offset;
     
@@ -95,7 +94,7 @@ public final class Limit {
         int rewriteRowCount;
         if (isFetchAll) {
             rewriteRowCount = Integer.MAX_VALUE;
-        } else if (isNeedRewriteRowCount()) {
+        } else if (rowCountRewriteFlag) {
             rewriteRowCount = null == rowCount ? -1 : getOffsetValue() + rowCount.getValue();
         } else {
             rewriteRowCount = rowCount.getValue();
@@ -106,14 +105,5 @@ public final class Limit {
         if (null != rowCount && rowCount.getIndex() > -1) {
             parameters.set(rowCount.getIndex(), rewriteRowCount);
         }
-    }
-    
-    /**
-     * Is need rewrite row count.
-     * 
-     * @return is need rewrite row count or not
-     */
-    public boolean isNeedRewriteRowCount() {
-        return DatabaseType.MySQL == databaseType || DatabaseType.PostgreSQL == databaseType || DatabaseType.H2 == databaseType;
     }
 }

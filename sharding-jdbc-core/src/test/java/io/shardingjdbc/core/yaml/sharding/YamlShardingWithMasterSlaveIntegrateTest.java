@@ -20,7 +20,6 @@ package io.shardingjdbc.core.yaml.sharding;
 import com.google.common.base.Function;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import io.shardingjdbc.core.api.ShardingDataSourceFactory;
 import io.shardingjdbc.core.yaml.AbstractYamlDataSourceTest;
 import lombok.RequiredArgsConstructor;
 import org.junit.Test;
@@ -58,11 +57,11 @@ public class YamlShardingWithMasterSlaveIntegrateTest extends AbstractYamlDataSo
     }
     
     @Test
-    public void assertWithDataSource() throws SQLException, URISyntaxException, IOException {
+    public void testWithDataSource() throws SQLException, URISyntaxException, IOException {
         File yamlFile = new File(YamlShardingWithMasterSlaveIntegrateTest.class.getResource(filePath).toURI());
         DataSource dataSource;
         if (hasDataSource) {
-            dataSource = ShardingDataSourceFactory.createDataSource(yamlFile);
+            dataSource = new YamlShardingDataSource(yamlFile);
         } else {
             Map<String, DataSource> dataSourceMap = Maps.asMap(Sets.newHashSet("db0_master", "db0_slave", "db1_master", "db1_slave"), new Function<String, DataSource>() {
                 @Override
@@ -74,16 +73,14 @@ public class YamlShardingWithMasterSlaveIntegrateTest extends AbstractYamlDataSo
             for (Map.Entry<String, DataSource> each : dataSourceMap.entrySet()) {
                 result.put(each.getKey(), each.getValue());
             }
-            dataSource = ShardingDataSourceFactory.createDataSource(result, yamlFile);
+            dataSource = new YamlShardingDataSource(result, yamlFile);
         }
         try (Connection conn = dataSource.getConnection();
              Statement stm = conn.createStatement()) {
-            stm.execute("Create INDEX t_order_index ON t_order(user_id)");
             stm.execute(String.format("INSERT INTO t_order(user_id,status) values(%d, %s)", 10, "'insert'"));
             stm.executeQuery("SELECT * FROM t_order");
             stm.executeQuery("SELECT * FROM t_order_item");
             stm.executeQuery("SELECT * FROM config");
-            stm.execute("DROP INDEX t_order_index");
         }
     }
 }

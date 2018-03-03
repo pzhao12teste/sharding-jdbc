@@ -22,7 +22,6 @@ import io.shardingjdbc.core.parsing.lexer.analyzer.Dictionary;
 import io.shardingjdbc.core.parsing.lexer.analyzer.Tokenizer;
 import io.shardingjdbc.core.parsing.lexer.token.Assist;
 import io.shardingjdbc.core.parsing.lexer.token.Token;
-import io.shardingjdbc.core.parsing.parser.exception.SQLParsingException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -66,7 +65,7 @@ public class Lexer {
         } else if (isEnd()) {
             currentToken = new Token(Assist.END, "", offset);
         } else {
-            throw new SQLParsingException(this, Assist.ERROR);
+            currentToken = new Token(Assist.ERROR, "", offset);
         }
         offset = currentToken.getEndPosition();
     }
@@ -119,7 +118,7 @@ public class Lexer {
     
     private boolean isNumberBegin() {
         return CharType.isDigital(getCurrentChar(0)) || ('.' == getCurrentChar(0) && CharType.isDigital(getCurrentChar(1)) && !isIdentifierBegin(getCurrentChar(-1))
-                || ('-' == getCurrentChar(0) && ('.' == getCurrentChar(1) || CharType.isDigital(getCurrentChar(1)))));
+                || ('-' == getCurrentChar(0) && ('.' == getCurrentChar(0) || CharType.isDigital(getCurrentChar(1)))));
     }
     
     private boolean isSymbolBegin() {

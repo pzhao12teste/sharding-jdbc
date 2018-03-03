@@ -54,29 +54,28 @@ public final class ShardingConnection extends AbstractConnectionAdapter {
     private final ShardingContext shardingContext;
     
     /**
-     * Get database connections via data source name for DDL.
+     * Get all database connections via data source name. 
      *
-     * <p>Non-Master-slave connection will return actual connection</p>
-     * <p>Master-slave connection will return actual master connections</p>
+     * <p>Master-slave connection will return all actual connections</p>
      * 
      * @param dataSourceName data source name
-     * @return all database connections via data source name for DDL
+     * @return all database connections via data source name
      * @throws SQLException SQL exception
      */
-    // TODO Return value is Connection because will support multiple master datasources in future.
-    public Collection<Connection> getConnectionsForDDL(final String dataSourceName) throws SQLException {
+    public Collection<Connection> getAllConnections(final String dataSourceName) throws SQLException {
         DataSource dataSource = shardingContext.getShardingRule().getDataSourceMap().get(dataSourceName);
         Preconditions.checkState(null != dataSource, "Missing the rule of %s in DataSourceRule", dataSourceName);
         Map<String, DataSource> dataSources;
         if (dataSource instanceof MasterSlaveDataSource) {
-            dataSources = ((MasterSlaveDataSource) dataSource).getMasterDataSource();
+            dataSources = ((MasterSlaveDataSource) dataSource).getAllDataSources();
         } else {
             dataSources = new HashMap<>(1, 1);
             dataSources.put(dataSourceName, dataSource);
         }
+        
         Collection<Connection> result = new LinkedList<>();
         for (Entry<String, DataSource> entry : dataSources.entrySet()) {
-            Connection connection = getCachedConnections().containsKey(entry.getKey()) ? getCachedConnections().get(entry.getKey()) : entry.getValue().getConnection();
+            Connection connection = entry.getValue().getConnection();
             replayMethodsInvocation(connection);
             getCachedConnections().put(entry.getKey(), connection);
             result.add(connection);

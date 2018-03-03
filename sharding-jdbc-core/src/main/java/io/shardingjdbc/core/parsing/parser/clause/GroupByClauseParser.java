@@ -5,9 +5,7 @@ import io.shardingjdbc.core.parsing.lexer.LexerEngine;
 import io.shardingjdbc.core.parsing.lexer.token.DefaultKeyword;
 import io.shardingjdbc.core.parsing.lexer.token.Keyword;
 import io.shardingjdbc.core.parsing.lexer.token.Symbol;
-import io.shardingjdbc.core.parsing.parser.clause.expression.BasicExpressionParser;
 import io.shardingjdbc.core.parsing.parser.context.OrderItem;
-import io.shardingjdbc.core.parsing.parser.dialect.ExpressionParserFactory;
 import io.shardingjdbc.core.parsing.parser.expression.SQLExpression;
 import io.shardingjdbc.core.parsing.parser.expression.SQLIdentifierExpression;
 import io.shardingjdbc.core.parsing.parser.expression.SQLIgnoreExpression;
@@ -24,11 +22,11 @@ public class GroupByClauseParser implements SQLClauseParser {
     
     private final LexerEngine lexerEngine;
     
-    private final BasicExpressionParser basicExpressionParser;
+    private final ExpressionClauseParser expressionClauseParser;
     
     public GroupByClauseParser(final LexerEngine lexerEngine) {
         this.lexerEngine = lexerEngine;
-        basicExpressionParser = ExpressionParserFactory.createBasicExpressionParser(lexerEngine);
+        expressionClauseParser = new ExpressionClauseParser(lexerEngine);
     }
     
     /**
@@ -42,7 +40,7 @@ public class GroupByClauseParser implements SQLClauseParser {
         }
         lexerEngine.accept(DefaultKeyword.BY);
         while (true) {
-            addGroupByItem(basicExpressionParser.parse(selectStatement), selectStatement);
+            addGroupByItem(expressionClauseParser.parse(selectStatement), selectStatement);
             if (!lexerEngine.equalAny(Symbol.COMMA)) {
                 break;
             }

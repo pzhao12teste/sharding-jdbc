@@ -17,8 +17,8 @@
 
 package io.shardingjdbc.core.jdbc.adapter;
 
-import com.google.common.base.Preconditions;
 import io.shardingjdbc.core.jdbc.unsupported.AbstractUnsupportedOperationResultSet;
+import com.google.common.base.Preconditions;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,26 +41,28 @@ public abstract class AbstractResultSetAdapter extends AbstractUnsupportedOperat
     
     @Getter
     private final List<ResultSet> resultSets;
-    
-    @Getter
-    private final Statement statement;
-    
+
     private boolean closed;
     
-    public AbstractResultSetAdapter(final List<ResultSet> resultSets, final Statement statement) {
+    public AbstractResultSetAdapter(final List<ResultSet> resultSets) {
         Preconditions.checkArgument(!resultSets.isEmpty());
         this.resultSets = resultSets;
-        this.statement = statement;
+    }
+    
+    @Override
+    // TODO should return sharding statement in future
+    public final Statement getStatement() throws SQLException {
+        return getResultSets().get(0).getStatement();
     }
     
     @Override
     public final ResultSetMetaData getMetaData() throws SQLException {
-        return resultSets.get(0).getMetaData();
+        return getResultSets().get(0).getMetaData();
     }
     
     @Override
     public int findColumn(final String columnLabel) throws SQLException {
-        return resultSets.get(0).findColumn(columnLabel);
+        return getResultSets().get(0).findColumn(columnLabel);
     }
     
     @Override
@@ -97,7 +99,7 @@ public abstract class AbstractResultSetAdapter extends AbstractUnsupportedOperat
     
     @Override
     public final int getFetchDirection() throws SQLException {
-        return resultSets.get(0).getFetchDirection();
+        return getResultSets().get(0).getFetchDirection();
     }
     
     @Override
@@ -115,28 +117,28 @@ public abstract class AbstractResultSetAdapter extends AbstractUnsupportedOperat
     
     @Override
     public final int getFetchSize() throws SQLException {
-        return resultSets.get(0).getFetchSize();
+        return getResultSets().get(0).getFetchSize();
     }
     
     @Override
     public final int getType() throws SQLException {
-        return resultSets.get(0).getType();
+        return getResultSets().get(0).getType();
     }
     
     @Override
     public final int getConcurrency() throws SQLException {
-        return resultSets.get(0).getConcurrency();
+        return getResultSets().get(0).getConcurrency();
     }
     
     @Override
     public final SQLWarning getWarnings() throws SQLException {
-        return resultSets.get(0).getWarnings();
+        return getResultSets().get(0).getWarnings();
     }
     
     @Override
     public final void clearWarnings() throws SQLException {
         Collection<SQLException> exceptions = new LinkedList<>();
-        for (ResultSet each : resultSets) {
+        for (ResultSet each : getResultSets()) {
             try {
                 each.clearWarnings();
             } catch (final SQLException ex) {

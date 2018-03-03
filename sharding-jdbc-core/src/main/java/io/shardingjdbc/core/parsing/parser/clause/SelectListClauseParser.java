@@ -1,7 +1,5 @@
 package io.shardingjdbc.core.parsing.parser.clause;
 
-import io.shardingjdbc.core.parsing.parser.clause.expression.AliasExpressionParser;
-import io.shardingjdbc.core.parsing.parser.dialect.ExpressionParserFactory;
 import io.shardingjdbc.core.rule.ShardingRule;
 import io.shardingjdbc.core.constant.AggregationType;
 import io.shardingjdbc.core.parsing.lexer.LexerEngine;
@@ -32,12 +30,12 @@ public class SelectListClauseParser implements SQLClauseParser {
     
     private final LexerEngine lexerEngine;
     
-    private final AliasExpressionParser aliasExpressionParser;
+    private final AliasClauseParser aliasClauseParser;
     
     public SelectListClauseParser(final ShardingRule shardingRule, final LexerEngine lexerEngine) {
         this.shardingRule = shardingRule;
         this.lexerEngine = lexerEngine;
-        aliasExpressionParser = ExpressionParserFactory.createAliasExpressionParser(lexerEngine);
+        aliasClauseParser = new AliasClauseParser(lexerEngine);
     }
     
     /**
@@ -66,7 +64,7 @@ public class SelectListClauseParser implements SQLClauseParser {
             result = parseAggregationSelectItem(selectStatement);
             parseRestSelectItem(selectStatement);
         } else {
-            result = new CommonSelectItem(SQLUtil.getExactlyValue(parseCommonSelectItem(selectStatement) + parseRestSelectItem(selectStatement)), aliasExpressionParser.parseSelectItemAlias());
+            result = new CommonSelectItem(SQLUtil.getExactlyValue(parseCommonSelectItem(selectStatement) + parseRestSelectItem(selectStatement)), aliasClauseParser.parse());
         }
         return result;
     }
@@ -89,7 +87,7 @@ public class SelectListClauseParser implements SQLClauseParser {
     
     private SelectItem parseStarSelectItem() {
         lexerEngine.nextToken();
-        aliasExpressionParser.parseSelectItemAlias();
+        aliasClauseParser.parse();
         return new StarSelectItem(Optional.<String>absent());
     }
     
@@ -100,7 +98,7 @@ public class SelectListClauseParser implements SQLClauseParser {
     private SelectItem parseAggregationSelectItem(final SelectStatement selectStatement) {
         AggregationType aggregationType = AggregationType.valueOf(lexerEngine.getCurrentToken().getLiterals().toUpperCase());
         lexerEngine.nextToken();
-        return new AggregationSelectItem(aggregationType, lexerEngine.skipParentheses(selectStatement), aliasExpressionParser.parseSelectItemAlias());
+        return new AggregationSelectItem(aggregationType, lexerEngine.skipParentheses(selectStatement), aliasClauseParser.parse());
     }
     
     private String parseCommonSelectItem(final SelectStatement selectStatement) {
@@ -113,7 +111,7 @@ public class SelectListClauseParser implements SQLClauseParser {
             result.append(lexerEngine.skipParentheses(selectStatement));
         } else if (lexerEngine.equalAny(Symbol.DOT)) {
             String tableName = SQLUtil.getExactlyValue(literals);
-            if (shardingRule.tryFindTableRuleByLogicTable(tableName).isPresent() || shardingRule.findBindingTableRule(tableName).isPresent()) {
+            if (shardingRule.tryFindTableRule(tableName).isPresent() || shardingRule.findBindingTableRule(tableName).isPresent()) {
                 selectStatement.getSqlTokens().add(new TableToken(position, literals));
             }
             result.append(lexerEngine.getCurrentToken().getLiterals());

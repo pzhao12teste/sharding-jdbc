@@ -26,13 +26,12 @@ import static org.junit.Assert.assertThat;
 public class ShardingPropertiesConstantTest {
     
     @Test
-    public void assertFindByKey() {
+    public void testFindByKey() {
         assertThat(ShardingPropertiesConstant.findByKey("sql.show"), is(ShardingPropertiesConstant.SQL_SHOW));
-        assertThat(ShardingPropertiesConstant.findByKey("executor.size"), is(ShardingPropertiesConstant.EXECUTOR_SIZE));
     }
     
     @Test
-    public void assertFindByKeyWhenNotFound() {
+    public void testFindByKeyWhenNotFound() {
         assertNull(ShardingPropertiesConstant.findByKey("empty"));
     }
 }

@@ -18,9 +18,6 @@
 package io.shardingjdbc.core.util;
 
 import com.google.common.base.CharMatcher;
-import io.shardingjdbc.core.constant.DatabaseType;
-import io.shardingjdbc.core.parsing.lexer.dialect.mysql.MySQLKeyword;
-import io.shardingjdbc.core.parsing.lexer.token.DefaultKeyword;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 
@@ -42,33 +39,5 @@ public class SQLUtil {
      */
     public static String getExactlyValue(final String value) {
         return null == value ? null : CharMatcher.anyOf("[]`'\"").removeFrom(value);
-    }
-    
-    /**
-     * Get original value for SQL expression.
-     * 
-     * @param value SQL expression
-     * @param databaseType database type
-     * @return original SQL expression
-     */
-    public static String getOriginalValue(final String value, final DatabaseType databaseType) {
-        if (DatabaseType.MySQL != databaseType) {
-            return value;
-        }
-        try {
-            DefaultKeyword.valueOf(value.toUpperCase());
-            return String.format("`%s`", value);
-        } catch (final IllegalArgumentException ex) {
-            return getOriginalValueForMySQLKeyword(value);
-        }
-    }
-    
-    private static String getOriginalValueForMySQLKeyword(final String value) {
-        try {
-            MySQLKeyword.valueOf(value.toUpperCase());
-            return String.format("`%s`", value);
-        } catch (final IllegalArgumentException ex) {
-            return value;
-        }
     }
 }

@@ -2,12 +2,9 @@ package io.shardingjdbc.core.parsing.parser.clause;
 
 import io.shardingjdbc.core.constant.OrderType;
 import io.shardingjdbc.core.parsing.lexer.LexerEngine;
-import io.shardingjdbc.core.parsing.lexer.dialect.oracle.OracleKeyword;
 import io.shardingjdbc.core.parsing.lexer.token.DefaultKeyword;
 import io.shardingjdbc.core.parsing.lexer.token.Symbol;
-import io.shardingjdbc.core.parsing.parser.clause.expression.BasicExpressionParser;
 import io.shardingjdbc.core.parsing.parser.context.OrderItem;
-import io.shardingjdbc.core.parsing.parser.dialect.ExpressionParserFactory;
 import io.shardingjdbc.core.parsing.parser.exception.SQLParsingException;
 import io.shardingjdbc.core.parsing.parser.expression.SQLExpression;
 import io.shardingjdbc.core.parsing.parser.expression.SQLIdentifierExpression;
@@ -31,11 +28,11 @@ public class OrderByClauseParser implements SQLClauseParser {
     @Getter
     private final LexerEngine lexerEngine;
     
-    private final BasicExpressionParser basicExpressionParser;
+    private final ExpressionClauseParser expressionClauseParser;
     
     public OrderByClauseParser(final LexerEngine lexerEngine) {
         this.lexerEngine = lexerEngine;
-        basicExpressionParser = ExpressionParserFactory.createBasicExpressionParser(lexerEngine);
+        expressionClauseParser = new ExpressionClauseParser(lexerEngine);
     }
     
     /**
@@ -48,7 +45,7 @@ public class OrderByClauseParser implements SQLClauseParser {
             return;
         }
         List<OrderItem> result = new LinkedList<>();
-        lexerEngine.skipIfEqual(OracleKeyword.SIBLINGS);
+        lexerEngine.skipIfEqual(DefaultKeyword.SIBLINGS);
         lexerEngine.accept(DefaultKeyword.BY);
         do {
             result.add(parseSelectOrderByItem(selectStatement));
@@ -58,7 +55,7 @@ public class OrderByClauseParser implements SQLClauseParser {
     }
     
     private OrderItem parseSelectOrderByItem(final SelectStatement selectStatement) {
-        SQLExpression sqlExpression = basicExpressionParser.parse(selectStatement);
+        SQLExpression sqlExpression = expressionClauseParser.parse(selectStatement);
         OrderType orderByType = OrderType.ASC;
         if (lexerEngine.skipIfEqual(DefaultKeyword.ASC)) {
             orderByType = OrderType.ASC;
