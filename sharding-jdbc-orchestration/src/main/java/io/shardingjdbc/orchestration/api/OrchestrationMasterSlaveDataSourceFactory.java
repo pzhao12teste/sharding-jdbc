@@ -20,80 +20,121 @@ package io.shardingjdbc.orchestration.api;
 import io.shardingjdbc.core.api.MasterSlaveDataSourceFactory;
 import io.shardingjdbc.core.api.config.MasterSlaveRuleConfiguration;
 import io.shardingjdbc.core.jdbc.core.datasource.MasterSlaveDataSource;
-import io.shardingjdbc.orchestration.json.DataSourceJsonConverter;
-import io.shardingjdbc.orchestration.json.GsonFactory;
-import io.shardingjdbc.orchestration.reg.base.CoordinatorRegistryCenter;
-import com.google.common.base.Charsets;
+import io.shardingjdbc.orchestration.api.config.OrchestrationConfiguration;
+import io.shardingjdbc.orchestration.internal.OrchestrationFacade;
+import io.shardingjdbc.orchestration.yaml.YamlOrchestrationMasterSlaveRuleConfiguration;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.ChildData;
-import org.apache.curator.framework.recipes.cache.TreeCache;
-import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
-import org.apache.curator.framework.recipes.cache.TreeCacheListener;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.constructor.Constructor;
 
 import javax.sql.DataSource;
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.sql.SQLException;
 import java.util.Map;
 
 /**
- * Orchestration master slave data source factory.
+ * Orchestration master-slave data source factory.
  * 
  * @author zhangliang 
+ * @author caohao  
  */
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public final class OrchestrationMasterSlaveDataSourceFactory {
     
     /**
-     * Create sharding data source.
+     * Create master-slave data source.
      * 
-     * @param name name of sharding data source
-     * @param registryCenter registry center
      * @param dataSourceMap data source map
-     * @param masterSlaveRuleConfig rule configuration for databases and tables sharding
+     * @param masterSlaveRuleConfig master-slave rule configuration
+     * @param orchestrationConfig orchestration master-slave configuration
+     * 
      * @return sharding data source
      * @throws SQLException SQL exception
      */
-    public static DataSource createDataSource(final String name, final CoordinatorRegistryCenter registryCenter, 
-                                              final Map<String, DataSource> dataSourceMap, final MasterSlaveRuleConfiguration masterSlaveRuleConfig) throws SQLException {
-        initRegistryCenter(name, registryCenter, dataSourceMap, masterSlaveRuleConfig);
+    public static DataSource createDataSource(
+            final Map<String, DataSource> dataSourceMap, final MasterSlaveRuleConfiguration masterSlaveRuleConfig, final OrchestrationConfiguration orchestrationConfig) throws SQLException {
         MasterSlaveDataSource result = (MasterSlaveDataSource) MasterSlaveDataSourceFactory.createDataSource(dataSourceMap, masterSlaveRuleConfig);
-        addConfigurationChangeListener(name, registryCenter, result);
+        new OrchestrationFacade(orchestrationConfig).initMasterSlaveOrchestration(dataSourceMap, masterSlaveRuleConfig, result);
         return result;
     }
     
-    private static void initRegistryCenter(final String name, 
-                                           final CoordinatorRegistryCenter registryCenter, final Map<String, DataSource> dataSourceMap, final MasterSlaveRuleConfiguration masterSlaveRuleConfig) {
-        registryCenter.init();
-        registryCenter.persist("/" + name + "/config/datasource", DataSourceJsonConverter.toJson(dataSourceMap));
-        registryCenter.persist("/" + name + "/config/masterslave", GsonFactory.getGson().toJson(masterSlaveRuleConfig));
-        registryCenter.addCacheData("/" + name + "/config");
+    /**
+     * Create master-slave data source.
+     *
+     * <p>One master data source can configure multiple slave data source.</p>
+     *
+     * @param yamlFile yaml file for master-slave rule configuration with data sources
+     * @return master-slave data source
+     * @throws SQLException SQL exception
+     * @throws IOException IO exception
+     */
+    public static DataSource createDataSource(final File yamlFile) throws SQLException, IOException {
+        YamlOrchestrationMasterSlaveRuleConfiguration config = unmarshal(yamlFile);
+        return createDataSource(config.getDataSources(), config.getMasterSlaveRule().getMasterSlaveRuleConfiguration(), config.getOrchestration().getOrchestrationConfiguration());
     }
     
-    private static void addConfigurationChangeListener(final String name, final CoordinatorRegistryCenter registryCenter, final MasterSlaveDataSource masterSlaveDataSource) {
-        TreeCache cache = (TreeCache) registryCenter.getRawCache("/" + name + "/config");
-        cache.getListenable().addListener(new TreeCacheListener() {
-            
-            @Override
-            public void childEvent(final CuratorFramework client, final TreeCacheEvent event) throws Exception {
-                ChildData childData = event.getData();
-                if (null == childData || null == childData.getData()) {
-                    return;
-                }
-                String path = childData.getPath();
-                if (path.isEmpty()) {
-                    return;
-                }
-                if (("/" + name + "/config/datasource").equals(path)) {
-                    Map<String, DataSource> newDataSourceMap = DataSourceJsonConverter.fromJson(new String(childData.getData(), Charsets.UTF_8));
-                    MasterSlaveRuleConfiguration masterSlaveRuleConfig = GsonFactory.getGson().fromJson(registryCenter.get("/" + name + "/config/masterslave"), MasterSlaveRuleConfiguration.class);
-                    masterSlaveDataSource.renew(masterSlaveRuleConfig.build(newDataSourceMap));
-                } else if (("/" + name + "/config/masterslave").equals(path)) {
-                    MasterSlaveRuleConfiguration newMasterSlaveRuleConfig = GsonFactory.getGson().fromJson(new String(childData.getData(), Charsets.UTF_8), MasterSlaveRuleConfiguration.class);
-                    Map<String, DataSource> dataSourceMap = DataSourceJsonConverter.fromJson(registryCenter.get("/" + name + "/config/datasource"));
-                    masterSlaveDataSource.renew(newMasterSlaveRuleConfig.build(dataSourceMap));
-                }
-            }
-        });
+    /**
+     * Create master-slave data source.
+     *
+     * <p>One master data source can configure multiple slave data source.</p>
+     *
+     * @param dataSourceMap data source map
+     * @param yamlFile yaml file for master-slave rule configuration without data sources
+     * @return master-slave data source
+     * @throws SQLException SQL exception
+     * @throws IOException IO exception
+     */
+    public static DataSource createDataSource(final Map<String, DataSource> dataSourceMap, final File yamlFile) throws SQLException, IOException {
+        YamlOrchestrationMasterSlaveRuleConfiguration config = unmarshal(yamlFile);
+        return createDataSource(dataSourceMap, config.getMasterSlaveRule().getMasterSlaveRuleConfiguration(), config.getOrchestration().getOrchestrationConfiguration());
+    }
+    
+    /**
+     * Create master-slave data source.
+     *
+     * <p>One master data source can configure multiple slave data source.</p>
+     *
+     * @param yamlByteArray yaml byte array for master-slave rule configuration with data sources
+     * @return master-slave data source
+     * @throws SQLException SQL exception
+     * @throws IOException IO exception
+     */
+    public static DataSource createDataSource(final byte[] yamlByteArray) throws SQLException, IOException {
+        YamlOrchestrationMasterSlaveRuleConfiguration config = unmarshal(yamlByteArray);
+        return createDataSource(config.getDataSources(), config.getMasterSlaveRule().getMasterSlaveRuleConfiguration(), config.getOrchestration().getOrchestrationConfiguration());
+    }
+    
+    /**
+     * Create master-slave data source.
+     *
+     * <p>One master data source can configure multiple slave data source.</p>
+     *
+     * @param dataSourceMap data source map
+     * @param yamlByteArray yaml byte array for master-slave rule configuration without data sources
+     * @return master-slave data source
+     * @throws SQLException SQL exception
+     * @throws IOException IO exception
+     */
+    public static DataSource createDataSource(final Map<String, DataSource> dataSourceMap, final byte[] yamlByteArray) throws SQLException, IOException {
+        YamlOrchestrationMasterSlaveRuleConfiguration config = unmarshal(yamlByteArray);
+        return createDataSource(dataSourceMap, config.getMasterSlaveRule().getMasterSlaveRuleConfiguration(), config.getOrchestration().getOrchestrationConfiguration());
+    }
+    
+    private static YamlOrchestrationMasterSlaveRuleConfiguration unmarshal(final File yamlFile) throws IOException {
+        try (
+                FileInputStream fileInputStream = new FileInputStream(yamlFile);
+                InputStreamReader inputStreamReader = new InputStreamReader(fileInputStream, "UTF-8")
+        ) {
+            return new Yaml(new Constructor(YamlOrchestrationMasterSlaveRuleConfiguration.class)).loadAs(inputStreamReader, YamlOrchestrationMasterSlaveRuleConfiguration.class);
+        }
+    }
+    
+    private static YamlOrchestrationMasterSlaveRuleConfiguration unmarshal(final byte[] yamlByteArray) throws IOException {
+        return new Yaml(new Constructor(YamlOrchestrationMasterSlaveRuleConfiguration.class)).loadAs(new ByteArrayInputStream(yamlByteArray), YamlOrchestrationMasterSlaveRuleConfiguration.class);
     }
 }

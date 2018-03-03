@@ -44,7 +44,6 @@ public final class ConnectionAdapterTest extends AbstractShardingJDBCDatabaseAnd
     @Test
     public void assertSetAutoCommit() throws SQLException {
         try (ShardingConnection actual = getShardingDataSource().getConnection()) {
-            assertThat(actual.getMetaData().getDatabaseProductName(), is(getCurrentDatabaseType().name()));
             assertTrue(actual.getAutoCommit());
             actual.setAutoCommit(false);
             actual.createStatement().executeQuery(sql);
@@ -103,7 +102,6 @@ public final class ConnectionAdapterTest extends AbstractShardingJDBCDatabaseAnd
     @Test
     public void assertSetReadOnly() throws SQLException {
         try (ShardingConnection actual = getShardingDataSource().getConnection()) {
-            assertThat(actual.getMetaData().getDatabaseProductName(), is(getCurrentDatabaseType().name()));
             assertTrue(actual.isReadOnly());
             actual.setReadOnly(false);
             actual.createStatement().executeQuery(sql);
@@ -131,7 +129,6 @@ public final class ConnectionAdapterTest extends AbstractShardingJDBCDatabaseAnd
     @Test
     public void assertSetTransactionIsolation() throws SQLException {
         try (ShardingConnection actual = getShardingDataSource().getConnection()) {
-            assertThat(actual.getMetaData().getDatabaseProductName(), is(getCurrentDatabaseType().name()));
             assertThat(actual.getTransactionIsolation(), is(Connection.TRANSACTION_READ_UNCOMMITTED));
             actual.setTransactionIsolation(Connection.TRANSACTION_SERIALIZABLE);
             actual.createStatement().executeQuery(sql);

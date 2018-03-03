@@ -1,8 +1,18 @@
 ## 2.0.0.M2
 
+### 里程碑
+
+1. 客户端的数据库访问治理，可以熔断数据库访问程序对数据库的访问
+
+### 功能提升
+
+1. [ISSUE #407](https://github.com/shardingjdbc/sharding-jdbc/issues/407) sharding-jdbc-spring-boot-starter兼容使用减号和驼峰两种方式进行属性配置
+1. [ISSUE #424](https://github.com/shardingjdbc/sharding-jdbc/issues/424) 提供SQL总体执行情况事件
+
 ### 缺陷修正
 
-1. [ISSUE #412](https://github.com/shardingjdbc/sharding-jdbc/issues/412) ShardingConnection开启事务之前获取元数据，造成路由的部分连接事务开启失败
+1. [ISSUE #404](https://github.com/shardingjdbc/sharding-jdbc/issues/404) sharding-jdbc-spring-boot-starter不支持HikariDataSource
+1. [ISSUE #419](https://github.com/shardingjdbc/sharding-jdbc/issues/419) SQL改写时, 未判断别名是否为关键字未加转义符导致了SQL异常
 
 ## 2.0.0.M1
 

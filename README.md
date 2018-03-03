@@ -4,12 +4,11 @@
 
 # [中文主页](http://shardingjdbc.io/index_zh.html)
 
-[![Build Status](https://secure.travis-ci.org/shardingjdbc/sharding-jdbc.png?branch=master)](https://travis-ci.org/shardingjdbc/sharding-jdbc)
-[![Maven Status](https://maven-badges.herokuapp.com/maven-central/io.shardingjdbc/sharding-jdbc/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.shardingjdbc/sharding-jdbc)
+[![Build Status](https://secure.travis-ci.org/shardingjdbc/sharding-jdbc.png?branch=master)](https://travis-ci.org/dangdangdotcom/sharding-jdbc)
+[![Maven Status](https://maven-badges.herokuapp.com/maven-central/com.dangdang/sharding-jdbc/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.dangdang/sharding-jdbc)
 [![Coverage Status](https://coveralls.io/repos/shardingjdbc/sharding-jdbc/badge.svg?branch=master&service=github)](https://coveralls.io/github/shardingjdbc/sharding-jdbc?branch=master)
 [![GitHub release](https://img.shields.io/github/release/shardingjdbc/sharding-jdbc.svg)](https://github.com/shardingjdbc/sharding-jdbc/releases)
-[![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
-[![Skywalking Tracing](https://img.shields.io/badge/Skywalking%20Tracing-enable-brightgreen.svg)](https://github.com/OpenSkywalking/skywalking)
+[![Hex.pm](http://shardingjdbc.github.io/sharding-jdbc/img/license.svg)](http://www.apache.org/licenses/LICENSE-2.0.html)
 
 # Overview
 
@@ -129,21 +128,21 @@ tables:
     databaseStrategy: 
       inline:
         shardingColumn: user_id
-        algorithmInlineExpression: ds_${user_id % 2}
+        algorithmExpression: ds_${user_id % 2}
     tableStrategy: 
       inline:
         shardingColumn: order_id
-        algorithmInlineExpression: t_order_${order_id % 2}
+        algorithmExpression: t_order_${order_id % 2}
   t_order_item: 
     actualDataNodes: ds_${0..1}.t_order_item_${0..1}
     databaseStrategy: 
       inline:
         shardingColumn: user_id
-        algorithmInlineExpression: ds_${user_id % 2}
+        algorithmExpression: ds_${user_id % 2}
     tableStrategy: 
       inline:
         shardingColumn: order_id
-        algorithmInlineExpression: t_order_item_${order_id % 2}
+        algorithmExpression: t_order_item_${order_id % 2}
 ```
 
 ```java
