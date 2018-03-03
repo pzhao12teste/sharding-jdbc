@@ -20,14 +20,10 @@ package io.shardingjdbc.orchestration.internal.config;
 import io.shardingjdbc.core.api.ConfigMapContext;
 import io.shardingjdbc.core.jdbc.core.datasource.MasterSlaveDataSource;
 import io.shardingjdbc.core.jdbc.core.datasource.ShardingDataSource;
-import io.shardingjdbc.orchestration.api.config.OrchestrationConfiguration;
 import io.shardingjdbc.orchestration.internal.listener.ListenerManager;
-import io.shardingjdbc.orchestration.reg.base.CoordinatorRegistryCenter;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.ChildData;
-import org.apache.curator.framework.recipes.cache.TreeCache;
-import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
-import org.apache.curator.framework.recipes.cache.TreeCacheListener;
+import io.shardingjdbc.orchestration.reg.api.RegistryCenter;
+import io.shardingjdbc.orchestration.reg.listener.DataChangedEvent;
+import io.shardingjdbc.orchestration.reg.listener.EventListener;
 
 /**
  * Config map listener manager.
@@ -38,31 +34,27 @@ public final class ConfigMapListenerManager implements ListenerManager {
     
     private final ConfigurationNode configNode;
     
-    private final CoordinatorRegistryCenter regCenter;
+    private final RegistryCenter regCenter;
     
-    private final ConfigurationService configurationService;
+    private final ConfigurationService configService;
     
-    public ConfigMapListenerManager(final OrchestrationConfiguration config) {
-        configNode = new ConfigurationNode(config.getName());
-        regCenter = config.getRegistryCenter();
-        configurationService = new ConfigurationService(config);
+    public ConfigMapListenerManager(final String name, final RegistryCenter regCenter) {
+        configNode = new ConfigurationNode(name);
+        this.regCenter = regCenter;
+        configService = new ConfigurationService(name, regCenter);
     }
     
     @Override
     public void start(final ShardingDataSource shardingDataSource) {
         String cachePath = configNode.getFullPath(ConfigurationNode.SHARDING_CONFIG_MAP_NODE_PATH);
-        regCenter.addCacheData(cachePath);
-        TreeCache cache = (TreeCache) regCenter.getRawCache(cachePath);
-        cache.getListenable().addListener(new TreeCacheListener() {
-        
+        regCenter.watch(cachePath, new EventListener() {
+            
             @Override
-            public void childEvent(final CuratorFramework client, final TreeCacheEvent event) throws Exception {
-                ChildData childData = event.getData();
-                if (null == childData || childData.getPath().isEmpty() || null == childData.getData() || TreeCacheEvent.Type.NODE_UPDATED != event.getType()) {
-                    return;
+            public void onChange(final DataChangedEvent event) {
+                if (DataChangedEvent.Type.UPDATED == event.getEventType()) {
+                    ConfigMapContext.getInstance().getShardingConfig().clear();
+                    ConfigMapContext.getInstance().getShardingConfig().putAll(configService.loadShardingConfigMap());
                 }
-                ConfigMapContext.getInstance().getShardingConfig().clear();
-                ConfigMapContext.getInstance().getShardingConfig().putAll(configurationService.loadShardingConfigMap());
             }
         });
     }
@@ -70,18 +62,14 @@ public final class ConfigMapListenerManager implements ListenerManager {
     @Override
     public void start(final MasterSlaveDataSource masterSlaveDataSource) {
         String cachePath = configNode.getFullPath(ConfigurationNode.MASTER_SLAVE_CONFIG_MAP_NODE_PATH);
-        regCenter.addCacheData(cachePath);
-        TreeCache cache = (TreeCache) regCenter.getRawCache(cachePath);
-        cache.getListenable().addListener(new TreeCacheListener() {
-        
+        regCenter.watch(cachePath, new EventListener() {
+            
             @Override
-            public void childEvent(final CuratorFramework client, final TreeCacheEvent event) throws Exception {
-                ChildData childData = event.getData();
-                if (null == childData || childData.getPath().isEmpty() || null == childData.getData() || TreeCacheEvent.Type.NODE_UPDATED != event.getType()) {
-                    return;
+            public void onChange(final DataChangedEvent event) {
+                if (DataChangedEvent.Type.UPDATED == event.getEventType()) {
+                    ConfigMapContext.getInstance().getMasterSlaveConfig().clear();
+                    ConfigMapContext.getInstance().getMasterSlaveConfig().putAll(configService.loadMasterSlaveConfigMap());
                 }
-                ConfigMapContext.getInstance().getMasterSlaveConfig().clear();
-                ConfigMapContext.getInstance().getMasterSlaveConfig().putAll(configurationService.loadMasterSlaveConfigMap());
             }
         });
     }

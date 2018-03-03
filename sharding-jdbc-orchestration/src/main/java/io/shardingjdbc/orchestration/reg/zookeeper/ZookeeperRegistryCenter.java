@@ -19,20 +19,21 @@ package io.shardingjdbc.orchestration.reg.zookeeper;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
-import io.shardingjdbc.orchestration.reg.base.CoordinatorRegistryCenter;
+import io.shardingjdbc.orchestration.reg.api.RegistryCenter;
 import io.shardingjdbc.orchestration.reg.exception.RegExceptionHandler;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
+import io.shardingjdbc.orchestration.reg.listener.DataChangedEvent;
+import io.shardingjdbc.orchestration.reg.listener.EventListener;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.TreeCache;
+import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
+import org.apache.curator.framework.recipes.cache.TreeCacheListener;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.utils.CloseableUtils;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.KeeperException.OperationTimeoutException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.ACL;
 
@@ -49,24 +50,18 @@ import java.util.concurrent.TimeUnit;
  * 
  * @author zhangliang
  */
-@Slf4j
-public final class ZookeeperRegistryCenter implements CoordinatorRegistryCenter {
+public final class ZookeeperRegistryCenter implements RegistryCenter {
     
-    @Getter(AccessLevel.PROTECTED)
-    private ZookeeperConfiguration zkConfig;
+    private final CuratorFramework client;
     
     private final Map<String, TreeCache> caches = new HashMap<>();
     
-    @Getter
-    private CuratorFramework client;
-    
     public ZookeeperRegistryCenter(final ZookeeperConfiguration zkConfig) {
-        this.zkConfig = zkConfig;
+        client = buildCuratorClient(zkConfig);
+        initCuratorClient(zkConfig);
     }
     
-    @Override
-    public void init() {
-        log.debug("Elastic job: zookeeper registry center initShardingOrchestration, server lists is: {}.", zkConfig.getServerLists());
+    private CuratorFramework buildCuratorClient(final ZookeeperConfiguration zkConfig) {
         CuratorFrameworkFactory.Builder builder = CuratorFrameworkFactory.builder()
                 .connectString(zkConfig.getServerLists())
                 .retryPolicy(new ExponentialBackoffRetry(zkConfig.getBaseSleepTimeMilliseconds(), zkConfig.getMaxRetries(), zkConfig.getMaxSleepTimeMilliseconds()))
@@ -80,51 +75,30 @@ public final class ZookeeperRegistryCenter implements CoordinatorRegistryCenter 
         if (!Strings.isNullOrEmpty(zkConfig.getDigest())) {
             builder.authorization("digest", zkConfig.getDigest().getBytes(Charsets.UTF_8))
                     .aclProvider(new ACLProvider() {
-                    
+                        
                         @Override
                         public List<ACL> getDefaultAcl() {
                             return ZooDefs.Ids.CREATOR_ALL_ACL;
                         }
-                    
+                        
                         @Override
                         public List<ACL> getAclForPath(final String path) {
                             return ZooDefs.Ids.CREATOR_ALL_ACL;
                         }
                     });
         }
-        client = builder.build();
+        return builder.build();
+    }
+    
+    private void initCuratorClient(final ZookeeperConfiguration zkConfig) {
         client.start();
         try {
             if (!client.blockUntilConnected(zkConfig.getMaxSleepTimeMilliseconds() * zkConfig.getMaxRetries(), TimeUnit.MILLISECONDS)) {
                 client.close();
-                throw new KeeperException.OperationTimeoutException();
+                throw new OperationTimeoutException();
             }
-            //CHECKSTYLE:OFF
-        } catch (final Exception ex) {
-            //CHECKSTYLE:ON
+        } catch (final InterruptedException | OperationTimeoutException ex) {
             RegExceptionHandler.handleException(ex);
-        }
-    }
-    
-    @Override
-    public void close() {
-        for (Entry<String, TreeCache> each : caches.entrySet()) {
-            each.getValue().close();
-        }
-        waitForCacheClose();
-        CloseableUtils.closeQuietly(client);
-    }
-    
-    /* TODO 等待500ms, cache先关闭再关闭client, 否则会抛异常
-     * 因为异步处理, 可能会导致client先关闭而cache还未关闭结束.
-     * 等待Curator新版本解决这个bug.
-     * BUG地址：https://issues.apache.org/jira/browse/CURATOR-157
-     */
-    private void waitForCacheClose() {
-        try {
-            Thread.sleep(500L);
-        } catch (final InterruptedException ex) {
-            Thread.currentThread().interrupt();
         }
     }
     
@@ -163,6 +137,18 @@ public final class ZookeeperRegistryCenter implements CoordinatorRegistryCenter 
     }
     
     @Override
+    public boolean isExisted(final String key) {
+        try {
+            return null != client.checkExists().forPath(key);
+        //CHECKSTYLE:OFF
+        } catch (final Exception ex) {
+        //CHECKSTYLE:ON
+            RegExceptionHandler.handleException(ex);
+            return false;
+        }
+    }
+    
+    @Override
     public List<String> getChildrenKeys(final String key) {
         try {
             List<String> result = client.getChildren().forPath(key);
@@ -179,18 +165,6 @@ public final class ZookeeperRegistryCenter implements CoordinatorRegistryCenter 
             //CHECKSTYLE:ON
             RegExceptionHandler.handleException(ex);
             return Collections.emptyList();
-        }
-    }
-    
-    @Override
-    public boolean isExisted(final String key) {
-        try {
-            return null != client.checkExists().forPath(key);
-        //CHECKSTYLE:OFF
-        } catch (final Exception ex) {
-        //CHECKSTYLE:ON
-            RegExceptionHandler.handleException(ex);
-            return false;
         }
     }
     
@@ -235,20 +209,67 @@ public final class ZookeeperRegistryCenter implements CoordinatorRegistryCenter 
     }
     
     @Override
-    public void addCacheData(final String cachePath) {
+    public void watch(final String key, final EventListener eventListener) {
+        final String path = key + "/";
+        if (!caches.containsKey(path)) {
+            addCacheData(key);
+        }
+        TreeCache cache = caches.get(path);
+        cache.getListenable().addListener(new TreeCacheListener() {
+            
+            @Override
+            public void childEvent(final CuratorFramework client, final TreeCacheEvent event) throws Exception {
+                ChildData data = event.getData();
+                if (null == data || null == data.getPath()) {
+                    return;
+                }
+                eventListener.onChange(new DataChangedEvent(getEventType(event), data.getPath(), null == data.getData() ? null : new String(data.getData(), "UTF-8")));
+            }
+            
+            private DataChangedEvent.Type getEventType(final TreeCacheEvent event) {
+                switch (event.getType()) {
+                    case NODE_UPDATED:
+                        return DataChangedEvent.Type.UPDATED;
+                    case NODE_REMOVED:
+                        return DataChangedEvent.Type.DELETED;
+                    default:
+                        return DataChangedEvent.Type.IGNORED;
+                }
+            }
+        });
+    }
+    
+    private void addCacheData(final String cachePath) {
         TreeCache cache = new TreeCache(client, cachePath);
         try {
             cache.start();
-        //CHECKSTYLE:OFF
+            //CHECKSTYLE:OFF
         } catch (final Exception ex) {
-        //CHECKSTYLE:ON
+            //CHECKSTYLE:ON
             RegExceptionHandler.handleException(ex);
         }
         caches.put(cachePath + "/", cache);
     }
     
     @Override
-    public Object getRawCache(final String cachePath) {
-        return caches.get(cachePath + "/");
+    public void close() {
+        for (Entry<String, TreeCache> each : caches.entrySet()) {
+            each.getValue().close();
+        }
+        waitForCacheClose();
+        CloseableUtils.closeQuietly(client);
+    }
+    
+    /* TODO 等待500ms, cache先关闭再关闭client, 否则会抛异常
+     * 因为异步处理, 可能会导致client先关闭而cache还未关闭结束.
+     * 等待Curator新版本解决这个bug.
+     * BUG地址：https://issues.apache.org/jira/browse/CURATOR-157
+     */
+    private void waitForCacheClose() {
+        try {
+            Thread.sleep(500L);
+        } catch (final InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
     }
 }

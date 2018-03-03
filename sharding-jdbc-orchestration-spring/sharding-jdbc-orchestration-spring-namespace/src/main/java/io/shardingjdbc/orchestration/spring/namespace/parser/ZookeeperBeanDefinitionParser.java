@@ -19,8 +19,7 @@ package io.shardingjdbc.orchestration.spring.namespace.parser;
 
 import com.google.common.base.Strings;
 import io.shardingjdbc.orchestration.reg.zookeeper.ZookeeperConfiguration;
-import io.shardingjdbc.orchestration.reg.zookeeper.ZookeeperRegistryCenter;
-import io.shardingjdbc.orchestration.spring.namespace.constants.RegistryCenterBeanDefinitionParserTag;
+import io.shardingjdbc.orchestration.spring.namespace.constants.ZookeeperRegistryCenterBeanDefinitionParserTag;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.xml.AbstractBeanDefinitionParser;
@@ -36,23 +35,16 @@ public final class ZookeeperBeanDefinitionParser extends AbstractBeanDefinitionP
     
     @Override
     protected AbstractBeanDefinition parseInternal(final Element element, final ParserContext parserContext) {
-        BeanDefinitionBuilder result = BeanDefinitionBuilder.rootBeanDefinition(ZookeeperRegistryCenter.class);
-        result.addConstructorArgValue(buildZookeeperConfigurationBeanDefinition(element));
-        result.setInitMethodName("init");
+        BeanDefinitionBuilder result = BeanDefinitionBuilder.rootBeanDefinition(ZookeeperConfiguration.class);
+        addPropertyValueIfNotEmpty(ZookeeperRegistryCenterBeanDefinitionParserTag.SERVER_LISTS_TAG, "serverLists", element, result);
+        addPropertyValueIfNotEmpty(ZookeeperRegistryCenterBeanDefinitionParserTag.NAMESPACE_TAG, "namespace", element, result);
+        addPropertyValueIfNotEmpty(ZookeeperRegistryCenterBeanDefinitionParserTag.BASE_SLEEP_TIME_MILLISECONDS_TAG, "baseSleepTimeMilliseconds", element, result);
+        addPropertyValueIfNotEmpty(ZookeeperRegistryCenterBeanDefinitionParserTag.MAX_SLEEP_TIME_MILLISECONDS_TAG, "maxSleepTimeMilliseconds", element, result);
+        addPropertyValueIfNotEmpty(ZookeeperRegistryCenterBeanDefinitionParserTag.MAX_RETRIES_TAG, "maxRetries", element, result);
+        addPropertyValueIfNotEmpty(ZookeeperRegistryCenterBeanDefinitionParserTag.SESSION_TIMEOUT_MILLISECONDS_TAG, "sessionTimeoutMilliseconds", element, result);
+        addPropertyValueIfNotEmpty(ZookeeperRegistryCenterBeanDefinitionParserTag.CONNECTION_TIMEOUT_MILLISECONDS_TAG, "connectionTimeoutMilliseconds", element, result);
+        addPropertyValueIfNotEmpty(ZookeeperRegistryCenterBeanDefinitionParserTag.DIGEST_TAG, "digest", element, result);
         return result.getBeanDefinition();
-    }
-    
-    private AbstractBeanDefinition buildZookeeperConfigurationBeanDefinition(final Element element) {
-        BeanDefinitionBuilder configuration = BeanDefinitionBuilder.rootBeanDefinition(ZookeeperConfiguration.class);
-        addPropertyValueIfNotEmpty(RegistryCenterBeanDefinitionParserTag.SERVER_LISTS_TAG, "serverLists", element, configuration);
-        addPropertyValueIfNotEmpty(RegistryCenterBeanDefinitionParserTag.NAMESPACE_TAG, "namespace", element, configuration);
-        addPropertyValueIfNotEmpty(RegistryCenterBeanDefinitionParserTag.BASE_SLEEP_TIME_MILLISECONDS_TAG, "baseSleepTimeMilliseconds", element, configuration);
-        addPropertyValueIfNotEmpty(RegistryCenterBeanDefinitionParserTag.MAX_SLEEP_TIME_MILLISECONDS_TAG, "maxSleepTimeMilliseconds", element, configuration);
-        addPropertyValueIfNotEmpty(RegistryCenterBeanDefinitionParserTag.MAX_RETRIES_TAG, "maxRetries", element, configuration);
-        addPropertyValueIfNotEmpty(RegistryCenterBeanDefinitionParserTag.SESSION_TIMEOUT_MILLISECONDS_TAG, "sessionTimeoutMilliseconds", element, configuration);
-        addPropertyValueIfNotEmpty(RegistryCenterBeanDefinitionParserTag.CONNECTION_TIMEOUT_MILLISECONDS_TAG, "connectionTimeoutMilliseconds", element, configuration);
-        addPropertyValueIfNotEmpty(RegistryCenterBeanDefinitionParserTag.DIGEST_TAG, "digest", element, configuration);
-        return configuration.getBeanDefinition();
     }
     
     private void addPropertyValueIfNotEmpty(final String attributeName, final String propertyName, final Element element, final BeanDefinitionBuilder factory) {

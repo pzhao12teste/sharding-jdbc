@@ -17,21 +17,20 @@
 
 package io.shardingjdbc.orchestration.internal.state.instance;
 
+import io.shardingjdbc.core.exception.ShardingJdbcException;
 import io.shardingjdbc.core.jdbc.core.datasource.MasterSlaveDataSource;
 import io.shardingjdbc.core.jdbc.core.datasource.ShardingDataSource;
-import io.shardingjdbc.orchestration.api.config.OrchestrationConfiguration;
 import io.shardingjdbc.orchestration.internal.config.ConfigurationService;
 import io.shardingjdbc.orchestration.internal.jdbc.datasource.CircuitBreakerDataSource;
 import io.shardingjdbc.orchestration.internal.listener.ListenerManager;
 import io.shardingjdbc.orchestration.internal.state.StateNode;
 import io.shardingjdbc.orchestration.internal.state.StateNodeStatus;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.ChildData;
-import org.apache.curator.framework.recipes.cache.TreeCache;
-import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
-import org.apache.curator.framework.recipes.cache.TreeCacheListener;
+import io.shardingjdbc.orchestration.reg.api.RegistryCenter;
+import io.shardingjdbc.orchestration.reg.listener.DataChangedEvent;
+import io.shardingjdbc.orchestration.reg.listener.EventListener;
 
 import javax.sql.DataSource;
+import java.sql.SQLException;
 import java.util.Map;
 
 /**
@@ -41,58 +40,56 @@ import java.util.Map;
  */
 public final class InstanceListenerManager implements ListenerManager {
     
-    private final OrchestrationConfiguration config;
-    
     private final StateNode stateNode;
     
-    private final ConfigurationService configurationService;
+    private final RegistryCenter regCenter;
     
-    public InstanceListenerManager(final OrchestrationConfiguration config) {
-        this.config = config;
-        stateNode = new StateNode(config.getName());
-        configurationService = new ConfigurationService(config);
+    private final ConfigurationService configService;
+    
+    public InstanceListenerManager(final String name, final RegistryCenter regCenter) {
+        stateNode = new StateNode(name);
+        this.regCenter = regCenter;
+        configService = new ConfigurationService(name, regCenter);
     }
     
     @Override
     public void start(final ShardingDataSource shardingDataSource) {
-        TreeCache cache = (TreeCache) config.getRegistryCenter().getRawCache(stateNode.getInstancesNodeFullPath(new OrchestrationInstance().getInstanceId()));
-        cache.getListenable().addListener(new TreeCacheListener() {
+        regCenter.watch(stateNode.getInstancesNodeFullPath(new OrchestrationInstance().getInstanceId()), new EventListener() {
             
             @Override
-            public void childEvent(final CuratorFramework client, final TreeCacheEvent event) throws Exception {
-                ChildData childData = event.getData();
-                if (null == childData || null == childData.getData() || childData.getPath().isEmpty() || TreeCacheEvent.Type.NODE_UPDATED != event.getType()) {
-                    return;
-                }
-                Map<String, DataSource> dataSourceMap = configurationService.loadDataSourceMap();
-                if (StateNodeStatus.DISABLED.toString().equalsIgnoreCase(config.getRegistryCenter().get(childData.getPath()))) {
-                    for (String each : dataSourceMap.keySet()) {
-                        dataSourceMap.put(each, new CircuitBreakerDataSource());
+            public void onChange(final DataChangedEvent event) {
+                if (DataChangedEvent.Type.UPDATED == event.getEventType()) {
+                    Map<String, DataSource> dataSourceMap = configService.loadDataSourceMap();
+                    if (StateNodeStatus.DISABLED.toString().equalsIgnoreCase(regCenter.get(event.getKey()))) {
+                        for (String each : dataSourceMap.keySet()) {
+                            dataSourceMap.put(each, new CircuitBreakerDataSource());
+                        }
+                    }
+                    try {
+                        shardingDataSource.renew(configService.loadShardingRuleConfiguration().build(dataSourceMap), configService.loadShardingProperties());
+                    } catch (final SQLException ex) {
+                        throw new ShardingJdbcException(ex);
                     }
                 }
-                shardingDataSource.renew(configurationService.loadShardingRuleConfiguration().build(dataSourceMap), configurationService.loadShardingProperties());
             }
         });
     }
     
     @Override
     public void start(final MasterSlaveDataSource masterSlaveDataSource) {
-        TreeCache cache = (TreeCache) config.getRegistryCenter().getRawCache(stateNode.getInstancesNodeFullPath(new OrchestrationInstance().getInstanceId()));
-        cache.getListenable().addListener(new TreeCacheListener() {
+        regCenter.watch(stateNode.getInstancesNodeFullPath(new OrchestrationInstance().getInstanceId()), new EventListener() {
             
             @Override
-            public void childEvent(final CuratorFramework client, final TreeCacheEvent event) throws Exception {
-                ChildData childData = event.getData();
-                if (null == childData || null == childData.getData() || childData.getPath().isEmpty() || TreeCacheEvent.Type.NODE_UPDATED != event.getType()) {
-                    return;
-                }
-                Map<String, DataSource> dataSourceMap = configurationService.loadDataSourceMap();
-                if (StateNodeStatus.DISABLED.toString().equalsIgnoreCase(config.getRegistryCenter().get(childData.getPath()))) {
-                    for (String each : dataSourceMap.keySet()) {
-                        dataSourceMap.put(each, new CircuitBreakerDataSource());
+            public void onChange(final DataChangedEvent event) {
+                if (DataChangedEvent.Type.UPDATED == event.getEventType()) {
+                    Map<String, DataSource> dataSourceMap = configService.loadDataSourceMap();
+                    if (StateNodeStatus.DISABLED.toString().equalsIgnoreCase(regCenter.get(event.getKey()))) {
+                        for (String each : dataSourceMap.keySet()) {
+                            dataSourceMap.put(each, new CircuitBreakerDataSource());
+                        }
                     }
+                    masterSlaveDataSource.renew(configService.loadMasterSlaveRuleConfiguration().build(dataSourceMap));
                 }
-                masterSlaveDataSource.renew(configurationService.loadMasterSlaveRuleConfiguration().build(dataSourceMap));
             }
         });
     }

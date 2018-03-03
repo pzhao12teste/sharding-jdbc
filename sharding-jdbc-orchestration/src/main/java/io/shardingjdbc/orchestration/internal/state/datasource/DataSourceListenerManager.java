@@ -17,18 +17,17 @@
 
 package io.shardingjdbc.orchestration.internal.state.datasource;
 
+import io.shardingjdbc.core.exception.ShardingJdbcException;
 import io.shardingjdbc.core.jdbc.core.datasource.MasterSlaveDataSource;
 import io.shardingjdbc.core.jdbc.core.datasource.ShardingDataSource;
-import io.shardingjdbc.orchestration.api.config.OrchestrationConfiguration;
 import io.shardingjdbc.orchestration.internal.config.ConfigurationService;
 import io.shardingjdbc.orchestration.internal.listener.ListenerManager;
 import io.shardingjdbc.orchestration.internal.state.StateNode;
-import io.shardingjdbc.orchestration.reg.base.CoordinatorRegistryCenter;
-import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.ChildData;
-import org.apache.curator.framework.recipes.cache.TreeCache;
-import org.apache.curator.framework.recipes.cache.TreeCacheEvent;
-import org.apache.curator.framework.recipes.cache.TreeCacheListener;
+import io.shardingjdbc.orchestration.reg.api.RegistryCenter;
+import io.shardingjdbc.orchestration.reg.listener.DataChangedEvent;
+import io.shardingjdbc.orchestration.reg.listener.EventListener;
+
+import java.sql.SQLException;
 
 /**
  * Data source listener manager.
@@ -39,32 +38,31 @@ public final class DataSourceListenerManager implements ListenerManager {
     
     private final StateNode stateNode;
     
-    private final CoordinatorRegistryCenter registryCenter;
+    private final RegistryCenter regCenter;
     
-    private final ConfigurationService configurationService;
+    private final ConfigurationService configService;
     
     private final DataSourceService dataSourceService;
     
-    public DataSourceListenerManager(final OrchestrationConfiguration config) {
-        stateNode = new StateNode(config.getName());
-        registryCenter = config.getRegistryCenter();
-        configurationService = new ConfigurationService(config);
-        dataSourceService = new DataSourceService(config);
+    public DataSourceListenerManager(final String name, final RegistryCenter regCenter) {
+        stateNode = new StateNode(name);
+        this.regCenter = regCenter;
+        configService = new ConfigurationService(name, regCenter);
+        dataSourceService = new DataSourceService(name, regCenter);
     }
     
     @Override
     public void start(final ShardingDataSource shardingDataSource) {
-        TreeCache cache = (TreeCache) registryCenter.getRawCache(stateNode.getDataSourcesNodeFullPath());
-        cache.getListenable().addListener(new TreeCacheListener() {
+        regCenter.watch(stateNode.getDataSourcesNodeFullPath(), new EventListener() {
             
             @Override
-            public void childEvent(final CuratorFramework client, final TreeCacheEvent event) throws Exception {
-                ChildData childData = event.getData();
-                if (null == childData || null == childData.getData() || childData.getPath().isEmpty()) {
-                    return;
-                }
-                if (TreeCacheEvent.Type.NODE_UPDATED == event.getType() || TreeCacheEvent.Type.NODE_REMOVED == event.getType()) {
-                    shardingDataSource.renew(dataSourceService.getAvailableShardingRule(), configurationService.loadShardingProperties());
+            public void onChange(final DataChangedEvent event) {
+                if (DataChangedEvent.Type.UPDATED == event.getEventType() || DataChangedEvent.Type.DELETED == event.getEventType()) {
+                    try {
+                        shardingDataSource.renew(dataSourceService.getAvailableShardingRuleConfiguration().build(dataSourceService.getAvailableDataSources()), configService.loadShardingProperties());
+                    } catch (final SQLException ex) {
+                        throw new ShardingJdbcException(ex);
+                    }
                 }
             }
         });
@@ -72,17 +70,12 @@ public final class DataSourceListenerManager implements ListenerManager {
     
     @Override
     public void start(final MasterSlaveDataSource masterSlaveDataSource) {
-        TreeCache cache = (TreeCache) registryCenter.getRawCache(stateNode.getDataSourcesNodeFullPath());
-        cache.getListenable().addListener(new TreeCacheListener() {
+        regCenter.watch(stateNode.getDataSourcesNodeFullPath(), new EventListener() {
             
             @Override
-            public void childEvent(final CuratorFramework client, final TreeCacheEvent event) throws Exception {
-                ChildData childData = event.getData();
-                if (null == childData || null == childData.getData() || childData.getPath().isEmpty()) {
-                    return;
-                }
-                if (TreeCacheEvent.Type.NODE_UPDATED == event.getType() || TreeCacheEvent.Type.NODE_REMOVED == event.getType()) {
-                    masterSlaveDataSource.renew(dataSourceService.getAvailableMasterSlaveRule());
+            public void onChange(final DataChangedEvent event) {
+                if (DataChangedEvent.Type.UPDATED == event.getEventType() || DataChangedEvent.Type.DELETED == event.getEventType()) {
+                    masterSlaveDataSource.renew(dataSourceService.getAvailableMasterSlaveRuleConfiguration().build(dataSourceService.getAvailableDataSources()));
                 }
             }
         });

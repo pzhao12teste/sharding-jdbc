@@ -19,11 +19,11 @@ package io.shardingjdbc.orchestration.internal.listener;
 
 import io.shardingjdbc.core.jdbc.core.datasource.MasterSlaveDataSource;
 import io.shardingjdbc.core.jdbc.core.datasource.ShardingDataSource;
-import io.shardingjdbc.orchestration.api.config.OrchestrationConfiguration;
 import io.shardingjdbc.orchestration.internal.config.ConfigMapListenerManager;
 import io.shardingjdbc.orchestration.internal.config.ConfigurationListenerManager;
 import io.shardingjdbc.orchestration.internal.state.datasource.DataSourceListenerManager;
 import io.shardingjdbc.orchestration.internal.state.instance.InstanceListenerManager;
+import io.shardingjdbc.orchestration.reg.api.RegistryCenter;
 
 /**
  * Registry center's listener factory.
@@ -40,11 +40,11 @@ public final class ListenerFactory {
     
     private final DataSourceListenerManager dataSourceListenerManager;
     
-    public ListenerFactory(final OrchestrationConfiguration config) {
-        configurationListenerManager = new ConfigurationListenerManager(config);
-        instanceListenerManager = new InstanceListenerManager(config);
-        configMapListenerManager = new ConfigMapListenerManager(config);
-        dataSourceListenerManager = new DataSourceListenerManager(config);
+    public ListenerFactory(final String name, final RegistryCenter regCenter) {
+        configurationListenerManager = new ConfigurationListenerManager(name, regCenter);
+        instanceListenerManager = new InstanceListenerManager(name, regCenter);
+        configMapListenerManager = new ConfigMapListenerManager(name, regCenter);
+        dataSourceListenerManager = new DataSourceListenerManager(name, regCenter);
     }
     
     /**

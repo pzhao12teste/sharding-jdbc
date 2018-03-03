@@ -17,9 +17,8 @@
 
 package io.shardingjdbc.orchestration.internal.state.instance;
 
-import io.shardingjdbc.orchestration.api.config.OrchestrationConfiguration;
 import io.shardingjdbc.orchestration.internal.state.StateNode;
-import io.shardingjdbc.orchestration.reg.base.CoordinatorRegistryCenter;
+import io.shardingjdbc.orchestration.reg.api.RegistryCenter;
 
 /**
  * Instance state service.
@@ -30,28 +29,24 @@ public final class InstanceStateService {
     
     private final StateNode stateNode;
     
-    private final CoordinatorRegistryCenter regCenter;
+    private final RegistryCenter regCenter;
     
-    public InstanceStateService(final OrchestrationConfiguration config) {
-        stateNode = new StateNode(config.getName());
-        regCenter = config.getRegistryCenter();
+    public InstanceStateService(final String name, final RegistryCenter regCenter) {
+        stateNode = new StateNode(name);
+        this.regCenter = regCenter;
     }
     
     /**
      * Persist sharding instance online.
      */
     public void persistShardingInstanceOnline() {
-        String instanceNodePath = stateNode.getInstancesNodeFullPath(new OrchestrationInstance().getInstanceId());
-        regCenter.persistEphemeral(instanceNodePath, "");
-        regCenter.addCacheData(instanceNodePath);
+        regCenter.persistEphemeral(stateNode.getInstancesNodeFullPath(new OrchestrationInstance().getInstanceId()), "");
     }
     
     /**
      * Persist master-salve instance online.
      */
     public void persistMasterSlaveInstanceOnline() {
-        String instanceNodePath = stateNode.getInstancesNodeFullPath(new OrchestrationInstance().getInstanceId());
-        regCenter.persistEphemeral(instanceNodePath, "");
-        regCenter.addCacheData(instanceNodePath);
+        regCenter.persistEphemeral(stateNode.getInstancesNodeFullPath(new OrchestrationInstance().getInstanceId()), "");
     }
 }
